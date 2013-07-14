@@ -107,7 +107,7 @@ namespace HttpServer
 						sock,
 						request.Version,
 						HttpStatusCode.InternalServerError,
-						HttpResponse.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
+						Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
 						"Internal Server Error!\n" + ex.ToString());
 					resp.Send();
 				}

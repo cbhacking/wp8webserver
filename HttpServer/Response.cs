@@ -20,8 +20,6 @@ namespace HttpServer
 {
 	public class HttpResponse
 	{
-		public static readonly String[] CONTENT_TYPES = { "text/html; charset=utf-8", "text/plain; charset=utf-8" };
-
 		Socket socket;
 		HttpVersion version;
 		HttpStatusCode status;
