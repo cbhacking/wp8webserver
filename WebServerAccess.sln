@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpServer", "HttpServer\HttpServer.csproj", "{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|ARM = Debug|ARM
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|ARM = Release|ARM
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Debug|ARM.ActiveCfg = Debug|ARM
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Debug|ARM.Build.0 = Debug|ARM
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Debug|x86.ActiveCfg = Debug|x86
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Debug|x86.Build.0 = Debug|x86
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Release|ARM.ActiveCfg = Release|ARM
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Release|ARM.Build.0 = Release|ARM
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Release|x86.ActiveCfg = Release|x86
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
