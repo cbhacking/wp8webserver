@@ -2,7 +2,7 @@
  * HttpServer\Response.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.0
+ * Version: 0.3.1
  * Source: https://wp8webserver.codeplex.com
  *
  * Tempate to construct an HTTP response. Not used directly by the server.
@@ -29,6 +29,7 @@ namespace HttpServer
 		Dictionary<String, String> headers;
 		byte[] content;
 
+		#region Constructors
 		public HttpResponse (Socket sock, HttpVersion vers, HttpStatusCode stat, String type, byte[] cont)
 		{
 			socket = sock;
@@ -49,7 +50,7 @@ namespace HttpServer
 		{
 			headers["Location"] = redir.OriginalString;
 		}
-
+		#endregion
 
 		private byte[] buildResponse ()
 		{
@@ -91,6 +92,14 @@ namespace HttpServer
 			set { headers = value; }
 		}
 
+		public void SetHeader (String name, String value)
+		{
+			headers[name] = value;
+		}
+
+		/// <summary>
+		/// Sends the HTTP response asynchronously, then closes the socket.
+		/// </summary>
 		public void Send ()
 		{
 			byte[] resp = buildResponse();
@@ -101,5 +110,29 @@ namespace HttpServer
 			if (!socket.SendAsync(args))
 				socket.Close();
 		}
+
+		#region Static methods
+		/// <summary>
+		/// Generates an HTTP redirection response, sends it asynchronously, then closes the socket.
+		/// </summary>
+		/// <param name="sock">The socket to send the response over. Will get closed by this call.</param>
+		/// <param name="version">The HTTP version to use. Defaults to 1.1.</param>
+		/// <param name="url">The address to which the browser should be redirected.</param>
+		public static void Redirect (Socket sock, Uri url, HttpVersion version = HttpVersion.ONE_POINT_ONE)
+		{
+			new HttpResponse(sock, version, url).Send();
+		}
+
+		/// <summary>
+		/// Generates an HTTP redirection response, sends it, and closes the socket.
+		/// </summary>
+		/// <param name="sock">The socket to send the response over. Will get closed by this call.</param>
+		/// <param name="version">The HTTP version to use. Defaults to 1.1.</param>
+		/// <param name="url">The address to which the browser should be redirected.</param>
+		public static void Redirect (Socket sock, String url, HttpVersion version = HttpVersion.ONE_POINT_ONE)
+		{
+			new HttpResponse(sock, version, new Uri(url)).Send();
+		}
+		#endregion
 	}
 }
