@@ -1,4 +1,14 @@
-﻿using System;
+﻿/*
+ * WebAccess\App.xaml.cs
+ * Author: GoodDayToDie on XDA-Developers forum
+ * License: Microsoft Public License (MS-PL)
+ * Version: 0.3.2
+ * Source: https://wp8webserver.codeplex.com
+ *
+ * Application-wide configuration (mostly disabling idle detection).
+ */
+
+using System;
 using System.Diagnostics;
 using System.Resources;
 using System.Windows;
@@ -35,6 +45,9 @@ namespace WebAccess
 			// Language display initialization
 			InitializeLanguage();
 
+			// Prevent the screen from turning off by disabling the application's idle detection.
+			PhoneApplicationService.Current.UserIdleDetectionMode = IdleDetectionMode.Disabled;
+
 			// Show graphics profiling information while debugging.
 			if (Debugger.IsAttached)
 			{
@@ -48,11 +61,6 @@ namespace WebAccess
 				// which shows areas of a page that are handed off to GPU with a colored overlay.
 				//Application.Current.Host.Settings.EnableCacheVisualization = true;
 
-				// Prevent the screen from turning off while under the debugger by disabling
-				// the application's idle detection.
-				// Caution:- Use this under debug mode only. Application that disables user idle detection will continue to run
-				// and consume battery power when the user is not using the phone.
-				PhoneApplicationService.Current.UserIdleDetectionMode = IdleDetectionMode.Disabled;
 			}
 
 		}

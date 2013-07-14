@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.1
+ * Version: 0.3.2
  * Source: https://wp8webserver.codeplex.com
  *
  * Handles GET requests from the web server.
@@ -150,19 +150,23 @@ namespace WebAccess
 						path, name, pattern);
 				}
 				// Get files, and hyperlink them for download
-				FileInfo[] files = nfs.GetFiles(search, true);
-				if (null == files)
+				FileInfo[] files = nfs.GetFiles(search, false);
+				// Check to make sure that there just aren't any files, which apparently also returns null...
+				if ((null == files) && (nfs.GetError() != 0))
 				{
 					String error = "An error occurred while querying file list.<br />The error number is " +
 					"<a href=\"http://msdn.microsoft.com/en-us/library/windows/desktop/ms681381(v=vs.85).aspx\">" +
 						nfs.GetError() + "</a>";
 					return error;
 				}
-				foreach (FileInfo info in files)
+				if (null != files)
 				{
-					build.AppendFormat(
-						"<tr><td>{2}</td><td><a href=\"/Filesystem?path={0}&download={1}\">{1}</a></td></tr>",
-						path, info.Name, info.Size);
+					foreach (FileInfo info in files)
+					{
+						build.AppendFormat(
+							"<tr><td>{2}</td><td><a href=\"/Filesystem?path={0}&download={1}\">{1}</a></td></tr>",
+							path, info.Name, info.Size);
+					}
 				}
 				return build.Append("</table>").ToString();
 			}

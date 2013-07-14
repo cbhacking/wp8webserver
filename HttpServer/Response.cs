@@ -2,7 +2,7 @@
  * HttpServer\Response.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.1
+ * Version: 0.3.2
  * Source: https://wp8webserver.codeplex.com
  *
  * Tempate to construct an HTTP response. Not used directly by the server.
@@ -54,7 +54,7 @@ namespace HttpServer
 		{
 			// Build the headers
 			StringBuilder build = new StringBuilder();
-			build.Append(HttpRequest.VERSIONS[(int)version]).Append(' ');
+			build.Append(Utility.VERSIONS[(int)version]).Append(' ');
 			build.Append((int)status).Append(' ').AppendLine(status.ToString());
 			if (null != contenttype)
 				build.Append("Content-Type: ").AppendLine(contenttype);

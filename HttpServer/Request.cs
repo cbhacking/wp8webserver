@@ -2,7 +2,7 @@
  * HttpServer\Request.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.0
+ * Version: 0.3.2
  * Source: https://wp8webserver.codeplex.com
  *
  * Parses an HTTP request from the listener. Does not perform any I/O.
@@ -22,9 +22,6 @@ namespace HttpServer
 	/// </summary>
 	public class HttpRequest
 	{
-		public static readonly String[] METHODS = { "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "CONNECT" };
-		public static readonly String[] VERSIONS = { "", "HTTP/1.0", "HTTP/1.1" };
-
 		HttpMethod method;
 		String path;
 		String querystring;
@@ -79,9 +76,9 @@ namespace HttpServer
 				}
 				// Identify the method
 				method = HttpMethod.INVALID_METHOD;
-				for (int i = 0; i < METHODS.Length; i++)
+				for (int i = 0; i < Utility.METHODS.Length; i++)
 				{
-					if (METHODS[i].Equals(firstline[0], StringComparison.InvariantCultureIgnoreCase))
+					if (Utility.METHODS[i].Equals(firstline[0], StringComparison.InvariantCultureIgnoreCase))
 					{
 						method = (HttpMethod)i;
 						break;
@@ -138,9 +135,9 @@ namespace HttpServer
 				{
 					// Check for a known version
 					version = HttpVersion.INVALID_VERSION;
-					for (int i = 0; i < VERSIONS.Length; i++)
+					for (int i = 0; i < Utility.VERSIONS.Length; i++)
 					{
-						if (VERSIONS[i].Equals(firstline[2], StringComparison.InvariantCultureIgnoreCase))
+						if (Utility.VERSIONS[i].Equals(firstline[2], StringComparison.InvariantCultureIgnoreCase))
 						{
 							version = (HttpVersion)i;
 						}
