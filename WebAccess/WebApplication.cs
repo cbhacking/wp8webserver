@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.2
+ * Version: 0.3.3
  * Source: https://wp8webserver.codeplex.com
  *
  * Handles GET requests from the web server.
@@ -16,6 +16,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Resources;
@@ -50,8 +51,8 @@ namespace WebAccess
 					stream = Application.GetResourceStream(new Uri(req.Path.Substring(1), UriKind.Relative)).Stream;
 					data = new byte[stream.Length];
 					stream.Read(data, 0, data.Length);
-					resp = new HttpResponse(sock, req.Version, HttpStatusCode.OK,
-						Utility.CONTENT_TYPES[(int)ResponseType.TEXT_HTML], data);
+					resp = new HttpResponse(sock, HttpStatusCode.OK,
+						Utility.CONTENT_TYPES[(int)ResponseType.TEXT_HTML], data, req.Version);
 					resp.Send();
 				}
 				catch (FileNotFoundException ex)
@@ -65,8 +66,8 @@ namespace WebAccess
 						(int)(HttpStatusCode.NotFound) + " " + HttpStatusCode.NotFound.ToString());
 					body = body.Replace("{CONTENT}",
 						"Unable to find the page \"" + req.Path + "\"</p><p>Exception info:<br />" + ex.ToString());
-					resp = new HttpResponse(sock, req.Version, HttpStatusCode.NotFound,
-						Utility.CONTENT_TYPES[(int)ResponseType.TEXT_HTML], body);
+					resp = new HttpResponse(sock, HttpStatusCode.NotFound,
+						Utility.CONTENT_TYPES[(int)ResponseType.TEXT_HTML], body, req.Version);
 					resp.Send();
 				}
 				return;
@@ -92,8 +93,10 @@ namespace WebAccess
 			{
 				body = "ERROR! Unable to find .\\Templates\\Filesystem.htm";
 			}
-			resp = new HttpResponse(sock, req.Version, HttpStatusCode.OK, Utility.CONTENT_TYPES[0], body);
+			resp = new HttpResponse(sock, HttpStatusCode.Gone, Utility.CONTENT_TYPES[(int)ResponseType.TEXT_HTML],
+				body, req.Version);
 			resp.Send();
+			GC.Collect();
 		}
 
 		private static String serviceFilesystem (HttpRequest req, Socket sock)
@@ -108,20 +111,46 @@ namespace WebAccess
 				if (req.UrlParameters.ContainsKey("download"))
 				{
 					String filename = req.UrlParameters["download"];
-					byte[] data = nfs.ReadFile(path + filename);
-					if (null == data)
+					String fullname = path + filename;
+					// Get the length
+					FileInfo[] info = nfs.GetFiles(fullname);
+					if (null == info)
 					{
 						// An error occurred
-						String error = "An error occurred while reading file contents.<br />" +
+						String error = "An error occurred while getting file information for download.<br />" +
 							"The error number is <a href=\"" +
 							"http://msdn.microsoft.com/en-us/library/windows/desktop/ms681381(v=vs.85).aspx\">" +
 							nfs.GetError() + "</a>";
 						return error;
 					}
 					// Create a file-download server response
-					HttpResponse resp = new HttpResponse(sock, req.Version, HttpStatusCode.OK, null, data);
+					HttpResponse resp = new HttpResponse(sock, HttpStatusCode.OK, null, (byte[])null, req.Version);
 					resp.Headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
-					resp.Send();
+					resp.SendHeaders(info[0].Size);
+					// Read and send the file in chunks
+					long offset = 0L;
+					AutoResetEvent reset = new AutoResetEvent(true);
+					while (offset < info[0].Size)
+					{
+						// Read the file in 4MB chunks, but wait until the last chunk is sent before sending again
+						byte[] data = nfs.ReadFile(fullname, offset, 0x400000);
+						if (null == data)
+						{
+							// An error occurred
+							break;
+						}
+						reset.WaitOne();
+						// Send while we read the next part of the file
+						SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+						args.SetBuffer(data, 0, data.Length);
+						args.Completed += (sender, args2) => {reset.Set();};
+						if (!sock.SendAsync(args))
+							reset.Set();
+						offset += data.Length;
+					}
+					// Wait for the last data to be sent (in case of an error, wait two minutes) then close the socket
+					reset.WaitOne(120000);
+					sock.Close();
 					return null;
 				}
 				// If we got here, not downloading. Assume listing directory contents

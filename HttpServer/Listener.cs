@@ -2,7 +2,7 @@
  * HttpServer\Listener.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.0
+ * Version: 0.3.3
  * Source: https://wp8webserver.codeplex.com
  *
  * Implements the listener portion of an HTTP server.
@@ -38,6 +38,7 @@ namespace HttpServer
 		/// </remarks>
 		/// <param name="port">The TCP port to listen on</param>
 		/// <param name="serv">The function which handles received requests.</param>
+		/// <exception cref="System.Net.Sockets.SocketException">Opening the socket for listening failed</exception>
 		public WebServer (ushort port, RequestServicer serv)
 		{
 			servicer = serv;
@@ -61,18 +62,16 @@ namespace HttpServer
 			while (true)
 			{
 				SocketAsyncEventArgs args = new SocketAsyncEventArgs();
-				args.Completed += accepter;
+				args.Completed += (sender, args2) =>
+				{
+					new Thread(handler).Start(args2.AcceptSocket);
+				};
 				if (!serversock.AcceptAsync(args))
 				{
 					// The operation completed synchronously, so it didn't raise the event
-					accepter(this, args);
+					new Thread(handler).Start(args.AcceptSocket);
 				}
 			}
-		}
-
-		private void accepter (Object sender, SocketAsyncEventArgs args)
-		{
-			new Thread(handler).Start(args.AcceptSocket);
 		}
 
 		/// <summary>
@@ -105,10 +104,10 @@ namespace HttpServer
 				{
 					HttpResponse resp = new HttpResponse(
 						sock,
-						request.Version,
 						HttpStatusCode.InternalServerError,
 						Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
-						"Internal Server Error!\n" + ex.ToString());
+						"Internal Server Error!\n" + ex.ToString(),
+						request.Version);
 					resp.Send();
 				}
 				// But, there might have been more than one request in the last packet
@@ -119,7 +118,7 @@ namespace HttpServer
 		/// Retrieves waiting data on the socket. Will block if no data is available
 		/// </summary>
 		/// <param name="sock">The socket to read from</param>
-		/// <returns></returns>
+		/// <returns>The UTF-8 encoded string read from the socket</returns>
 		private String getData (Socket sock)
 		{
 			EventWaitHandle wait = new EventWaitHandle(false, EventResetMode.AutoReset);

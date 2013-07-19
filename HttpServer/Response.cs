@@ -2,10 +2,10 @@
  * HttpServer\Response.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.2
+ * Version: 0.3.3
  * Source: https://wp8webserver.codeplex.com
  *
- * Tempate to construct an HTTP response. Not used directly by the server.
+ * Template to construct an HTTP response. Not used directly by the server.
  */
 
 using System;
@@ -14,6 +14,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace HttpServer
@@ -28,7 +29,7 @@ namespace HttpServer
 		byte[] content;
 
 		#region Constructors
-		public HttpResponse (Socket sock, HttpVersion vers, HttpStatusCode stat, String type, byte[] cont)
+		public HttpResponse (Socket sock, HttpStatusCode stat, String type, byte[] cont, HttpVersion vers = HttpVersion.ONE_POINT_ONE)
 		{
 			socket = sock;
 			version = vers;
@@ -38,13 +39,19 @@ namespace HttpServer
 			content = cont;
 		}
 
-		public HttpResponse (Socket sock, HttpVersion vers, HttpStatusCode stat, String type, String cont)
-			: this(sock, vers, stat, type, Encoding.UTF8.GetBytes(cont))
+		public HttpResponse (Socket sock, HttpStatusCode stat, String type, String cont, HttpVersion vers = HttpVersion.ONE_POINT_ONE)
+			: this(sock, stat, type, Encoding.UTF8.GetBytes(cont), vers)
 		{
 		}
 
-		public HttpResponse (Socket sock, HttpVersion vers, Uri redir)
-			: this(sock, vers, HttpStatusCode.Redirect, null, (byte[])null)
+		/// <summary>
+		/// Create a redirection (HTTP 302) response. Does not send the response.
+		/// </summary>
+		/// <param name="sock">The open, connected TCP socket through which the response will eventually be sent.</param>
+		/// <param name="redir">The URI to which the browser should be redirected. Can be absolute or relative.</param>
+		/// <param name="vers">The HTTP version to use for the response. Optional (defaults to 1.1)</param>
+		public HttpResponse (Socket sock, Uri redir, HttpVersion vers = HttpVersion.ONE_POINT_ONE)
+			: this(sock, HttpStatusCode.Redirect, null, (byte[])null, vers)
 		{
 			headers["Location"] = redir.OriginalString;
 		}
@@ -69,10 +76,10 @@ namespace HttpServer
 			}
 			build.AppendLine(); // Empty line to terminate the headers
 			String head = build.ToString();
-			int headlen = Encoding.UTF8.GetByteCount(head);
 			// Build the array
 			if (null != content)
 			{
+				int headlen = Encoding.UTF8.GetByteCount(head);
 				byte[] ret = new byte[headlen + content.Length];
 				Array.Copy(Encoding.UTF8.GetBytes(head), ret, headlen);
 				Array.Copy(content, 0, ret, headlen, content.Length);
@@ -80,7 +87,7 @@ namespace HttpServer
 			}
 			else
 			{
-				return Encoding.UTF8.GetBytes(build.ToString());
+				return Encoding.UTF8.GetBytes(head);
 			}
 		}
 
@@ -109,6 +116,27 @@ namespace HttpServer
 				socket.Close();
 		}
 
+		/// <summary>
+		/// Builds and sends the HTTP response header block but does not send any content or close the socket.
+		/// Useful when an amount of data too large for a single send (such as a large file) needs to be sent.
+		/// </summary>
+		/// <param name="contentlength">Desired value of the Content-Length header. Header won't be added if 0</param>
+		public void SendHeaders (long contentlength)
+		{
+			AutoResetEvent reset = new AutoResetEvent(false);
+			if (contentlength > 0)
+			{
+				headers["Content-Length"] = contentlength.ToString();
+			}
+			byte[] resp = buildResponse();
+			SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+			args.SetBuffer(resp, 0, resp.Length);
+			args.Completed += (sender, comp) => { reset.Set(); };
+			socket.SendBufferSize = resp.Length;
+			if (socket.SendAsync(args))
+				reset.WaitOne();
+		}
+
 		#region Static methods
 		/// <summary>
 		/// Generates an HTTP redirection response, sends it asynchronously, then closes the socket.
@@ -118,7 +146,7 @@ namespace HttpServer
 		/// <param name="url">The address to which the browser should be redirected.</param>
 		public static void Redirect (Socket sock, Uri url, HttpVersion version = HttpVersion.ONE_POINT_ONE)
 		{
-			new HttpResponse(sock, version, url).Send();
+			new HttpResponse(sock, url, version).Send();
 		}
 
 		/// <summary>
@@ -129,7 +157,7 @@ namespace HttpServer
 		/// <param name="url">The address to which the browser should be redirected.</param>
 		public static void Redirect (Socket sock, String url, HttpVersion version = HttpVersion.ONE_POINT_ONE)
 		{
-			new HttpResponse(sock, version, new Uri(url)).Send();
+			new HttpResponse(sock, new Uri(url), version).Send();
 		}
 		#endregion
 	}

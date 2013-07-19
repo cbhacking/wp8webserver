@@ -2,7 +2,7 @@
  * WebAccess\MainPage.xaml.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.0
+ * Version: 0.3.3
  * Source: https://wp8webserver.codeplex.com
  *
  * Finds the WiFi address, displays the URL, and starts the web server.
@@ -46,7 +46,15 @@ namespace WebAccess
 					break;
 				}
 			}
-			WebServer server = new WebServer(9999, WebApplication.ServiceRequest);
+			try
+			{
+				WebServer server = new WebServer(9999, WebApplication.ServiceRequest);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show("Unable to start HTTP listener!\nException: " + ex.ToString());
+				Application.Current.Terminate();
+			}
 		}
 
 		// Sample code for building a localized ApplicationBar

@@ -1,13 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Deployment xmlns="http://schemas.microsoft.com/windowsphone/2012/deployment" AppPlatformVersion="8.0">
   <DefaultLanguage xmlns="" code="en-US" />
-  <App xmlns="" ProductID="{7bbc8703-fb43-4e9e-88c9-62957ea0d59b}" Title="WebServer File Access" RuntimeType="Silverlight" Version="0.3.0.0" Genre="apps.normal" Author="GoodDayToDie" Description="Browse your phone's file system over WiFi using a web server." Publisher="GoodDayToDie via XDA-Developers forum" PublisherID="{1362529f-b4ff-41e9-9651-40134086d0fa}">
+  <App xmlns="" ProductID="{7bbc8703-fb43-4e9e-88c9-62957ea0d59b}" Title="WebServer File Access" RuntimeType="Silverlight" Version="0.3.3.0" Genre="apps.normal" Author="GoodDayToDie" Description="Browse your phone's file system over WiFi using a web browser." Publisher="GoodDayToDie via XDA-Developers forum" PublisherID="{1362529f-b4ff-41e9-9651-40134086d0fa}">
     <IconPath IsRelative="true" IsResource="false">Assets\ApplicationIcon.png</IconPath>
     <Capabilities>
       <Capability Name="ID_CAP_NETWORKING" />
       <Capability Name="ID_CAP_MEDIALIB_AUDIO" />
       <Capability Name="ID_CAP_MEDIALIB_PHOTO" />
       <Capability Name="ID_CAP_REMOVABLE_STORAGE" />
+<!--      <Capability Name="ID_CAP_INTERNET_EXPLORER_FAVORITES" />
+      <Capability Name="ID_CAP_EVERYONE" />
+      <Capability Name="ID_CAP_OEM_DEPLOYMENT" />-->
     </Capabilities>
     <Tasks>
       <DefaultTask Name="_default" NavigationPage="MainPage.xaml" />

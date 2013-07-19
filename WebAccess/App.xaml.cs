@@ -2,7 +2,7 @@
  * WebAccess\App.xaml.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.2
+ * Version: 0.3.3
  * Source: https://wp8webserver.codeplex.com
  *
  * Application-wide configuration (mostly disabling idle detection).
@@ -52,7 +52,7 @@ namespace WebAccess
 			if (Debugger.IsAttached)
 			{
 				// Display the current frame rate counters.
-				Application.Current.Host.Settings.EnableFrameRateCounter = true;
+				//Application.Current.Host.Settings.EnableFrameRateCounter = true;
 
 				// Show the areas of the app that are being redrawn in each frame.
 				//Application.Current.Host.Settings.EnableRedrawRegions = true;
@@ -106,6 +106,10 @@ namespace WebAccess
 			{
 				// An unhandled exception has occurred; break into the debugger
 				Debugger.Break();
+			}
+			else
+			{
+				MessageBox.Show("An unhandled exception occurred!\nException: " + e.ExceptionObject.ToString());
 			}
 		}
 
