@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.0
+ * Version: 0.4.2
  * Source: https://wp8webserver.codeplex.com
  *
  * Handles GET requests from the web server.
@@ -42,32 +42,54 @@ namespace WebAccess
 			if (req.Path.Equals("/Filesystem", StringComparison.InvariantCultureIgnoreCase))
 			{
 				// The Retrieve the requested file system resource and display it in the template
-				content = serviceFilesystem(req, sock);
-				if (null == content)
+				try
 				{
-					// This was handled entirely in the servicing function
-					return;
+					content = serviceFilesystem(req, sock);
+
+					if (null == content)
+					{
+						// This was handled entirely in the servicing function
+						return;
+					}
+					body = readFile("Templates/Filesystem.htm");
+					body.Replace("{CONTENT}", content);
+					content = body.ToString();
 				}
-				body = readFile("Templates/Filesystem.htm");
-				body.Replace("{CONTENT}", content);
-				content = body.ToString();
+				catch (Exception ex)
+				{
+					code = HttpStatusCode.InternalServerError;
+					body = readFile("Templates/Error.htm");
+					body.Replace("{ERROR}", (int)code + " " + code.ToString())
+						.Replace("{CONTENT}",
+							"Unable to find the page \"" + req.Path +
+							"\"<p>Exception info:<br />" + ex.ToString() + "</p>");
+					content = body.ToString();
+				}
 			}
 			else if (req.Path.StartsWith("/Registry", StringComparison.InvariantCultureIgnoreCase))
 			{
-				content = serviceRegistry(req, sock);
-				if (null == content)
+				try
 				{
-					// This was handled entirely in the servicing function
-					return;
+					content = serviceRegistry(req, sock);
+					if (null == content)
+					{
+						// This was handled entirely in the servicing function
+						return;
+					}
+					body = readFile("Templates/Registry.htm");
+					body.Replace("{CONTENT}", content);
+					content = body.ToString();
 				}
-				if (null == content)
+				catch (Exception ex)
 				{
-					// This was handled entirely in the servicing function
-					return;
+					code = HttpStatusCode.InternalServerError;
+					body = readFile("Templates/Error.htm");
+					body.Replace("{ERROR}", (int)code + " " + code.ToString())
+						.Replace("{CONTENT}",
+							"Unable to find the page \"" + req.Path +
+							"\"<p>Exception info:<br />" + ex.ToString() + "</p>");
+					content = body.ToString();
 				}
-				body = readFile("Templates/Registry.htm");
-				body.Replace("{CONTENT}", content);
-				content = body.ToString();
 			}
 			else if (req.Path.Equals("/"))
 			{
@@ -248,9 +270,10 @@ namespace WebAccess
 					return null;
 				}
 				// Build the HTML body
-				StringBuilder build = new StringBuilder("<table><tr><th>Keys</th></tr>");
-				if (subkeys != null)
+				StringBuilder build = new StringBuilder();
+				if (subkeys != null && subkeys.Length > 0)
 				{
+					build.AppendLine("<table><tr><th>Keys</th></tr>");
 					foreach (String key in subkeys)
 					{
 						build.Append("<tr><td><a href='/Registry?hive=").Append(((uint)hk).ToString("X"))
@@ -262,17 +285,35 @@ namespace WebAccess
 						build.Append(HttpUtility.UrlEncode(key)).Append("'>")
 							.Append(key).AppendLine("</a></td></tr>");
 					}
+					build.AppendLine("</table>");
 				}
-				build.AppendLine("</table>").AppendLine("<table><tr><th>Values</th><th>Type</th><th>Size</th></tr>");
-				if (values != null)
+				if (values != null && values.Length > 0)
 				{
+					build.AppendLine("<table><tr><th>Values</th><th>Type</th><th>Size</th><th>Data</th></tr>");
 					foreach (ValueInfo info in values)
 					{
 						build.Append("<tr><td>").Append(info.Name).Append("</td><td>").Append(info.Type.ToString())
-							.Append("</td><td>").Append(info.Length).AppendLine("</td></tr>");
+							.Append("</td><td>").Append(info.Length).AppendLine("</td><td>");
+						if (RegistryType.String == info.Type || RegistryType.VariableString == info.Type)
+						{
+							String data;
+							if (NativeRegistry.ReadString(hk, path, info.Name, out data))
+							{
+								build.Append(data);
+							}
+						}
+						else if (RegistryType.Integer == info.Type)
+						{
+							uint data;
+							if (NativeRegistry.ReadDWORD(hk, path, info.Name, out data))
+							{
+								build.Append(data);
+							}
+						}
+						build.AppendLine("</td></tr>");
 					}
+					build.AppendLine("</table>");
 				}
-				build.AppendLine("</table>");
 				return build.ToString();
 			}
 			else

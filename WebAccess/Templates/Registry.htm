@@ -12,20 +12,21 @@
         <input type="text" name="path" value="{PATH}" size="50" />
         <input type="submit" name="openKey" value="View Key" />
     </form>
+    <script type="text/javascript">
+        var params = {};
+        window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi,
+            function (str, key, value) {
+                params[key] = value;
+            }
+        );
+        var thehive = document.forms[0].hive;
+        for (var i = 0; i < thehive.length; i++) {
+            if (thehive[i].value == params["hive"]) {
+                thehive[i].selected = true;
+                break;
+            }
+        }
+        document.forms[0].path.value = decodeURIComponent(params["path"].replace("+", " "));
+    </script>
     <br />
-{CONTENT}<!--
-    <table>
-        <tr>
-            <th>Keys</th>
-        </tr>
-        {KEYS}
-    </table>
-    <table>
-        <tr>
-            <th>Value</th>
-            <th>Type</th>
-            <th>Size</th>
-        </tr>
-        {VALUES}
-    </table>
--->
+{CONTENT}
