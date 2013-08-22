@@ -1,0 +1,31 @@
+﻿
+    <form action="/Registry" method="get">
+        Key: 
+        <select name="hive">
+            <option value="80000000">HKEY_CLASSES_ROOT</option>
+            <option value="80000001">HKEY_CURRENT_USER</option>
+            <option value="80000002">HKEY_LOCAL_MACHINE</option>
+            <option value="80000003">HKEY_USERS</option>
+            <option value="80000004">HKEY_PERFORMANCE_DATA</option>
+            <option value="80000005">HKEY_CURRENT_CONFIG</option>
+        </select>
+        <input type="text" name="path" value="{PATH}" size="50" />
+        <input type="submit" name="openKey" value="View Key" />
+    </form>
+    <br />
+{CONTENT}<!--
+    <table>
+        <tr>
+            <th>Keys</th>
+        </tr>
+        {KEYS}
+    </table>
+    <table>
+        <tr>
+            <th>Value</th>
+            <th>Type</th>
+            <th>Size</th>
+        </tr>
+        {VALUES}
+    </table>
+-->

@@ -1,18 +1,7 @@
-﻿<!DOCTYPE html>
-
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <meta charset="utf-8" />
-    <title>WP8 FileAccess - {TITLE}</title>
-</head>
-<body>
-    <h1>File Access WebServer</h1>
-    <h2>By GoodDayToDie on <a href="http:\\forum.xda-developers.com">XDA-Developers</a></h2>
-    <form action="/Filesystem", method="get">
+﻿
+    <form action="/Filesystem" method="get">
         Path: <input type="text" name="path" value="{PATH}" size="50" />
         <input type="hidden" name="pattern" value="*" />
         <input type="submit" name="getFiles" value="List Files" />
     </form>
     <p><br />{CONTENT}</p>
-</body>
-</html>
