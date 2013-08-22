@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.3
+ * Version: 0.4.0
  * Source: https://wp8webserver.codeplex.com
  *
  * Handles GET requests from the web server.
@@ -20,8 +20,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Resources;
-using FileSystem;
+using System.Globalization;
+
 using HttpServer;
+using FileSystem;
+using Registry;
 using FileInfo = FileSystem.FileInfo;
 
 namespace WebAccess
@@ -31,9 +34,9 @@ namespace WebAccess
 		public static void ServiceRequest (HttpRequest req, Socket sock)
 		{
 			String content = null;
-			Stream stream;
-			byte[] data;
-			String body;
+			String html;
+			StringBuilder body;
+			HttpStatusCode code = HttpStatusCode.OK;
 			HttpResponse resp;
 
 			if (req.Path.Equals("/Filesystem", StringComparison.InvariantCultureIgnoreCase))
@@ -41,60 +44,82 @@ namespace WebAccess
 				// The Retrieve the requested file system resource and display it in the template
 				content = serviceFilesystem(req, sock);
 				if (null == content)
+				{
+					// This was handled entirely in the servicing function
 					return;
+				}
+				body = readFile("Templates/Filesystem.htm");
+				body.Replace("{CONTENT}", content);
+				content = body.ToString();
 			}
-			if (req.Path.StartsWith("/Content/", StringComparison.InvariantCultureIgnoreCase))
+			else if (req.Path.StartsWith("/Registry", StringComparison.InvariantCultureIgnoreCase))
 			{
-				// Retrieve the requested Content address and display it un-modified
+				content = serviceRegistry(req, sock);
+				if (null == content)
+				{
+					// This was handled entirely in the servicing function
+					return;
+				}
+				if (null == content)
+				{
+					// This was handled entirely in the servicing function
+					return;
+				}
+				body = readFile("Templates/Registry.htm");
+				body.Replace("{CONTENT}", content);
+				content = body.ToString();
+			}
+			else if (req.Path.Equals("/"))
+			{
+				// Go to the home page
+				HttpResponse.Redirect(sock, new Uri("/Content/Index.htm", UriKind.Relative), req.Version);
+				return;
+			}
+			else
+			{
+				// Retrieve the requested path (probably Content) and display it un-modified
 				try
 				{
-					stream = Application.GetResourceStream(new Uri(req.Path.Substring(1), UriKind.Relative)).Stream;
-					data = new byte[stream.Length];
-					stream.Read(data, 0, data.Length);
+					body = readFile(req.Path.Substring(1));
 					resp = new HttpResponse(sock, HttpStatusCode.OK,
-						Utility.CONTENT_TYPES[(int)ResponseType.TEXT_HTML], data, req.Version);
+						Utility.CONTENT_TYPES[(int)ResponseType.TEXT_HTML], body.ToString(), req.Version);
 					resp.Send();
 				}
 				catch (FileNotFoundException ex)
 				{
-					// The specified Content page doesn't exist; return 404
-					stream = Application.GetResourceStream(new Uri("Templates/Error.htm", UriKind.Relative)).Stream;
-					data = new byte[stream.Length];
-					stream.Read(data, 0, data.Length);
-					body = Encoding.UTF8.GetString(data, 0, data.Length);
-					body = body.Replace("{ERROR}",
-						(int)(HttpStatusCode.NotFound) + " " + HttpStatusCode.NotFound.ToString());
-					body = body.Replace("{CONTENT}",
-						"Unable to find the page \"" + req.Path + "\"</p><p>Exception info:<br />" + ex.ToString());
-					resp = new HttpResponse(sock, HttpStatusCode.NotFound,
-						Utility.CONTENT_TYPES[(int)ResponseType.TEXT_HTML], body, req.Version);
-					resp.Send();
+					// The specified page doesn't exist; return 404
+					code = HttpStatusCode.NotFound;
+					body = readFile("Templates/Error.htm");
+					body.Replace("{ERROR}", (int)code + " " + code.ToString())
+						.Replace("{CONTENT}",
+							"Unable to find the page \"" + req.Path + 
+							"\"<p>Exception info:<br />" + ex.ToString() + "</p>");
+					content = body.ToString();
 				}
 				return;
 			}
-			if (req.Path.Equals("/"))
+			body = readFile("Templates/Master.htm");
+			if (null != body)
 			{
-				// Go to the home page
-				HttpResponse.Redirect(sock, new Uri("/Content/Index.htm", UriKind.Relative), req.Version);
-			}
-			StreamResourceInfo sri = Application.GetResourceStream(new Uri("Templates/Filesystem.htm", UriKind.Relative));
-			if (null != sri)
-			{
-				stream = sri.Stream;
-				data = new byte[stream.Length];
-				stream.Read(data, 0, data.Length);
-				body = Encoding.UTF8.GetString(data, 0, data.Length);
-				body = body.Replace("{CONTENT}",
-					(null == content) ? "The requested URL path, \"" + req.Path + "\", was not found" : content);
-				body = body.Replace("{PATH}",
-					(req.UrlParameters.ContainsKey("path")) ? req.UrlParameters["path"] : "");
+				if (null == content)
+				{
+					code = HttpStatusCode.BadRequest;
+					StringBuilder error = readFile("Templates/Error.htm");
+					error.Replace(" {ERROR}", "")
+						.Replace("{CONTENT}", "Unknown error while servicing the request; no data returned");
+					content = error.ToString();
+				}
+				body.Replace("{CONTENT}", content);
+				html = body.ToString();
 			}
 			else
 			{
-				body = "ERROR! Unable to find .\\Templates\\Filesystem.htm";
+				// Can't even open the master page!
+				html = "ERROR! Unable to find .\\Templates\\Master.htm";
+				code = HttpStatusCode.Gone;
 			}
-			resp = new HttpResponse(sock, HttpStatusCode.Gone, Utility.CONTENT_TYPES[(int)ResponseType.TEXT_HTML],
-				body, req.Version);
+			resp = new HttpResponse(sock, code, Utility.CONTENT_TYPES[(int)ResponseType.TEXT_HTML],
+				html, req.Version);
 			resp.Send();
 			GC.Collect();
 		}
@@ -201,6 +226,81 @@ namespace WebAccess
 			}
 			else
 				return null;	// No path, this should never happen...
+		}
+
+		private static String serviceRegistry (HttpRequest req, Socket sock)
+		{
+			if (req.UrlParameters.ContainsKey("hive") &&
+				req.UrlParameters.ContainsKey("path"))
+			{
+				// Load the requested registry key
+				RegistryHive hk = (RegistryHive)int.Parse(req.UrlParameters["hive"], NumberStyles.AllowHexSpecifier);
+				String path = req.UrlParameters["path"];
+				String[] subkeys;
+				ValueInfo[] values;
+				if (!NativeRegistry.GetSubKeyNames(hk, path, out subkeys))
+				{
+					// An error occurred!
+					return null;
+				}
+				if (!NativeRegistry.GetValues(hk, path, out values))
+				{
+					return null;
+				}
+				// Build the HTML body
+				StringBuilder build = new StringBuilder("<table><tr><th>Keys</th></tr>");
+				if (subkeys != null)
+				{
+					foreach (String key in subkeys)
+					{
+						build.Append("<tr><td><a href='/Registry?hive=").Append(((uint)hk).ToString("X"))
+							.Append("&path=");
+						if (!String.IsNullOrEmpty(path))
+						{
+							build.Append(HttpUtility.UrlEncode(path)).Append("\\");
+						}
+						build.Append(HttpUtility.UrlEncode(key)).Append("'>")
+							.Append(key).AppendLine("</a></td></tr>");
+					}
+				}
+				build.AppendLine("</table>").AppendLine("<table><tr><th>Values</th><th>Type</th><th>Size</th></tr>");
+				if (values != null)
+				{
+					foreach (ValueInfo info in values)
+					{
+						build.Append("<tr><td>").Append(info.Name).Append("</td><td>").Append(info.Type.ToString())
+							.Append("</td><td>").Append(info.Length).AppendLine("</td></tr>");
+					}
+				}
+				build.AppendLine("</table>");
+				return build.ToString();
+			}
+			else
+			{
+				// No request specified...
+				return
+					@"Specify a registry key above, or jump to the following examples:<br />
+<a href='/Registry?hive=80000002&path=SOFTWARE\Microsoft\DeviceReg\Install'>Dev-unlock info</a><br />
+<a href='/Registry?hive=80000001&path='>Current User registry hive</a><br />";
+			}
+		}
+
+		private static StringBuilder readFile (String file)
+		{
+			String content = null;
+			Stream stream;
+			byte[] data;
+
+			StreamResourceInfo sri = Application.GetResourceStream(new Uri(file, UriKind.Relative));
+			if (null != sri)
+			{
+				stream = sri.Stream;
+				data = new byte[stream.Length];
+				stream.Read(data, 0, data.Length);
+				content = Encoding.UTF8.GetString(data, 0, data.Length);
+				return new StringBuilder(content);
+			}
+			return null;
 		}
 	}
 }

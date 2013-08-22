@@ -140,9 +140,11 @@
     <Content Include="Assets\Tiles\IconicTileSmall.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Templates\Master.htm" />
     <Content Include="Templates\Error.htm" />
     <Content Include="Templates\Filesystem.htm" />
     <Content Include="Content\Index.htm" />
+    <Content Include="Templates\Registry.htm" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\AppResources.resx">
@@ -159,6 +161,9 @@
   <ItemGroup>
     <Reference Include="FileSystem">
       <HintPath>..\..\NativeAccess\ARM\Release\FileSystem\FileSystem.winmd</HintPath>
+    </Reference>
+    <Reference Include="Registry">
+      <HintPath>..\..\NativeAccess\ARM\Release\Registry\Registry.winmd</HintPath>
     </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\$(TargetFrameworkIdentifier)\$(TargetFrameworkVersion)\Microsoft.$(TargetFrameworkIdentifier).$(TargetFrameworkVersion).Overrides.targets" />
