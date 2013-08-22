@@ -2,7 +2,7 @@
  * HttpServer\Request.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.2
+ * Version: 0.3.4
  * Source: https://wp8webserver.codeplex.com
  *
  * Parses an HTTP request from the listener. Does not perform any I/O.
@@ -146,7 +146,14 @@ namespace HttpServer
 			}   // if (!resume || 0 == currentLine)
 			#endregion
 			// Parse the headers
-			headers = new Dictionary<String, String>(lines.Length - 2); // Max header count
+			if (lines.Length > 2)
+			{
+				headers = new Dictionary<String, String>(lines.Length - 2); // Max header count
+			}
+			else
+			{
+				headers = new Dictionary<string, string>();
+			}
 			if (!resume)
 				contentlength = -1;
 			for (currentLine = (resume) ? currentLine : 1;
