@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.2
+ * Version: 0.4.3
  * Source: https://wp8webserver.codeplex.com
  *
  * Handles GET requests from the web server.

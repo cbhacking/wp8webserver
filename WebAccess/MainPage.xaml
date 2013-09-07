@@ -49,6 +49,7 @@
         <Grid x:Name="ContentPanel" Grid.Row="1" Margin="12,0,12,0">
             <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" Text="Server URL: " VerticalAlignment="Top" Foreground="Gray"/>
             <TextBlock x:Name="ServerUrl" HorizontalAlignment="Left" Margin="121,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Text="No WiFi Connection!"/>
+            <Button x:Name="RestartButton" Content="Restart server" HorizontalAlignment="Left" Margin="10,42,0,0" VerticalAlignment="Top" Width="436" Click="RestartButton_Click"/>
 
         </Grid>
 

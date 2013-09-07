@@ -2,7 +2,7 @@
  * WebAccess\MainPage.xaml.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.3
+ * Version: 0.4.4
  * Source: https://wp8webserver.codeplex.com
  *
  * Finds the WiFi address, displays the URL, and starts the web server.
@@ -27,6 +27,8 @@ namespace WebAccess
 {
 	public partial class MainPage : PhoneApplicationPage
 	{
+		static WebServer server = null;
+
 		// Constructor
 		public MainPage ()
 		{
@@ -48,7 +50,31 @@ namespace WebAccess
 			}
 			try
 			{
-				WebServer server = new WebServer(9999, WebApplication.ServiceRequest);
+				if (null == server)
+				{
+					server = new WebServer(9999, WebApplication.ServiceRequest);
+				}
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show("Unable to start HTTP listener!\nException: " + ex.ToString());
+				Application.Current.Terminate();
+			}
+		}
+
+		private void RestartButton_Click (object sender, RoutedEventArgs e)
+		{
+			if (null != server)
+			{
+				server = null;
+				GC.Collect();
+			}
+			try
+			{
+				if (null == server)
+				{
+					server = new WebServer(9999, WebApplication.ServiceRequest);
+				}
 			}
 			catch (Exception ex)
 			{
