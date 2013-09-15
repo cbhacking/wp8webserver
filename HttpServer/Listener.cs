@@ -52,9 +52,20 @@ namespace HttpServer
 
 		~WebServer ()
 		{
-			listenthread.Abort();
-			serversock.Shutdown(SocketShutdown.Both);
-			serversock.Close();
+			Close();
+		}
+
+		public void Close ()
+		{
+			if (listenthread.IsAlive)
+			{
+				listenthread.Abort();
+			}
+			if (serversock.Connected)
+			{
+				serversock.Shutdown(SocketShutdown.Both);
+				serversock.Close();
+			}
 		}
 
 		private void listener ()

@@ -2,7 +2,7 @@
  * HttpServer\Properties\AssemblyInfo.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.0
+ * Version: 0.3.3
  * Source: https://wp8webserver.codeplex.com
  *
  * Sets assembly metadata
