@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.3
+ * Version: 0.4.6
  * Source: https://wp8webserver.codeplex.com
  *
  * Handles GET requests from the web server.
@@ -34,6 +34,7 @@ namespace WebAccess
 		public static void ServiceRequest (HttpRequest req, Socket sock)
 		{
 			String content = null;
+			String title = null;
 			String html;
 			StringBuilder body;
 			HttpStatusCode code = HttpStatusCode.OK;
@@ -132,6 +133,7 @@ namespace WebAccess
 					content = error.ToString();
 				}
 				body.Replace("{CONTENT}", content);
+				body.Replace("{TITLE}", (null == title) ? String.Empty : title);
 				html = body.ToString();
 			}
 			else
@@ -263,11 +265,13 @@ namespace WebAccess
 				if (!NativeRegistry.GetSubKeyNames(hk, path, out subkeys))
 				{
 					// An error occurred!
-					return null;
+					return "An error occurred while getting the registry sub-keys! The Win32 error code was " +
+						NativeRegistry.GetError();
 				}
 				if (!NativeRegistry.GetValues(hk, path, out values))
 				{
-					return null;
+					return "An error occurred while getting the registry values! The Win32 error code was " +
+						NativeRegistry.GetError();
 				}
 				// Build the HTML body
 				StringBuilder build = new StringBuilder();
@@ -289,7 +293,7 @@ namespace WebAccess
 				}
 				if (values != null && values.Length > 0)
 				{
-					build.AppendLine("<table><tr><th>Values</th><th>Type</th><th>Size</th><th>Data</th></tr>");
+					build.AppendLine("<table border=\"1\"><tr><th>Values</th><th>Type</th><th>Size</th><th>Data</th></tr>");
 					foreach (ValueInfo info in values)
 					{
 						build.Append("<tr><td>").Append(info.Name).Append("</td><td>").Append(info.Type.ToString())
@@ -297,9 +301,9 @@ namespace WebAccess
 						if (RegistryType.String == info.Type || RegistryType.VariableString == info.Type)
 						{
 							String data;
-							if (NativeRegistry.ReadString(hk, path, info.Name, out data))
+							if (NativeRegistry.ReadString(hk, path, info.Name, out data) && !String.IsNullOrEmpty(data))
 							{
-								build.Append(data);
+								build.Append(WebUtility.HtmlEncode(data));
 							}
 						}
 						else if (RegistryType.Integer == info.Type)
@@ -308,6 +312,19 @@ namespace WebAccess
 							if (NativeRegistry.ReadDWORD(hk, path, info.Name, out data))
 							{
 								build.Append(data);
+							}
+						}
+						else if (RegistryType.MultiString == info.Type)
+						{
+							String[] data;
+							if (NativeRegistry.ReadMultiString(hk, path, info.Name, out data)
+								&& (data != null) && (data.Length > 0))
+							{
+								build.Append(WebUtility.HtmlEncode(data[0]));
+								for (int i = 1; i < data.Length; i++)
+								{
+									build.AppendLine("<br />").Append(WebUtility.HtmlEncode(data[i]));
+								}
 							}
 						}
 						build.AppendLine("</td></tr>");

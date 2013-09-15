@@ -28,6 +28,7 @@ namespace WebAccess
 	public partial class MainPage : PhoneApplicationPage
 	{
 		static WebServer server = null;
+		static ushort port = 9999;
 
 		// Constructor
 		public MainPage ()
@@ -40,11 +41,12 @@ namespace WebAccess
 
 		private void PhoneApplicationPage_Loaded (object sender, RoutedEventArgs e)
 		{
+			UpdatePort();
 			foreach (HostName name in NetworkInformation.GetHostNames())
 			{
 				if (name.IPInformation.NetworkAdapter.IanaInterfaceType == 71)
 				{
-					ServerUrl.Text = "http://" + name.CanonicalName + ":9999";
+					ServerUrl.Text = "http://" + name.CanonicalName + ":" + port;
 					break;
 				}
 			}
@@ -52,7 +54,7 @@ namespace WebAccess
 			{
 				if (null == server)
 				{
-					server = new WebServer(9999, WebApplication.ServiceRequest);
+					server = new WebServer(port, WebApplication.ServiceRequest);
 				}
 			}
 			catch (Exception ex)
@@ -62,10 +64,25 @@ namespace WebAccess
 			}
 		}
 
+		private void UpdatePort ()
+		{
+			if (ushort.TryParse(PortText.Text, out port))
+			{
+			}
+			else
+			{
+				MessageBox.Show("Unable to parse port number!");
+				port = 9999;
+			}
+		}
+
 		private void RestartButton_Click (object sender, RoutedEventArgs e)
 		{
+			ServerUrl.Text = "Restarting server...";
+			UpdatePort();
 			if (null != server)
 			{
+				server.Close();
 				server = null;
 				GC.Collect();
 			}
@@ -73,13 +90,21 @@ namespace WebAccess
 			{
 				if (null == server)
 				{
-					server = new WebServer(9999, WebApplication.ServiceRequest);
+					server = new WebServer(port, WebApplication.ServiceRequest);
 				}
 			}
 			catch (Exception ex)
 			{
 				MessageBox.Show("Unable to start HTTP listener!\nException: " + ex.ToString());
 				Application.Current.Terminate();
+			}
+			foreach (HostName name in NetworkInformation.GetHostNames())
+			{
+				if (name.IPInformation.NetworkAdapter.IanaInterfaceType == 71)
+				{
+					ServerUrl.Text = "http://" + name.CanonicalName + ":" + port;
+					break;
+				}
 			}
 		}
 
