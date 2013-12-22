@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.8
+ * Version: 0.4.9
  * Source: https://wp8webserver.codeplex.com
  *
  * Handles GET requests from the web server.
@@ -175,7 +175,7 @@ namespace WebAccess
 					// Create a file-download server response
 					HttpResponse resp = new HttpResponse(sock, HttpStatusCode.OK, null, (byte[])null, req.Version);
 					resp.Headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
-					resp.SendHeaders(info[0].Size);
+					resp.SendHeaders((ulong)info[0].Size);
 					// Read and send the file in chunks
 					long offset = 0L;
 					AutoResetEvent reset = new AutoResetEvent(true);
@@ -303,7 +303,28 @@ namespace WebAccess
 						{
 						case RegistryType.String:
 						case RegistryType.VariableString:
-							{	// Handle REG_SZ and REG_EXPAND_SZ
+							{	// Make sure it's really a string; display binary otherwise
+								if (0 != (info.Length % 2))
+								{
+									byte[] binary;
+									if (NativeRegistry.ReadBinary(hk, path, info.Name, out binary))
+									{
+										if (null != binary)
+										{
+											buildHexTable(build, binary);
+										}
+										else
+										{	// No data!
+											build.Append("<i>NULL</i>");
+										}
+									}
+									else
+									{	// Error reading data
+										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+									}
+									break;
+								}
+								// Handle REG_SZ and REG_EXPAND_SZ
 								String data;
 								if (NativeRegistry.ReadString(hk, path, info.Name, out data) && !String.IsNullOrEmpty(data))
 								{
@@ -312,7 +333,28 @@ namespace WebAccess
 								break;
 							}
 						case RegistryType.Integer:
-							{	// Handle REG_DWORD
+							{	// Make sure it's really a DWORD; display binary otherwise
+								if (info.Length != 4)
+								{
+									byte[] binary;
+									if (NativeRegistry.ReadBinary(hk, path, info.Name, out binary))
+									{
+										if (null != binary)
+										{
+											buildHexTable(build, binary);
+										}
+										else
+										{	// No data!
+											build.Append("<i>NULL</i>");
+										}
+									}
+									else
+									{	// Error reading data
+										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+									}
+									break;
+								}
+								// Handle REG_DWORD
 								uint data;
 								if (NativeRegistry.ReadDWORD(hk, path, info.Name, out data))
 								{
@@ -321,17 +363,59 @@ namespace WebAccess
 								break;
 							}
 						case RegistryType.Long:
-							{	// Handle REG_QWORD
+							{	// Make sure it's really a QWORD; display binary otherwise
+								if (info.Length != 8)
+								{
+									byte[] binary;
+									if (NativeRegistry.ReadBinary(hk, path, info.Name, out binary))
+									{
+										if (null != binary)
+										{
+											buildHexTable(build, binary);
+										}
+										else
+										{	// No data!
+											build.Append("<i>NULL</i>");
+										}
+									}
+									else
+									{	// Error reading data
+										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+									}
+									break;
+								}
+								// Handle REG_QWORD
 								ulong data;
 								if (NativeRegistry.ReadQWORD(hk, path, info.Name, out data))
 								{
-									// TODO: Display the DATETIME value in readable format
-									build.Append(data);
+									DateTime date = DateTime.FromFileTime((long)data);
+									build.Append(data).AppendFormat(" (0x{0:X16}) (", data).Append(date.ToString()).Append(')');
 								}
 								break;
 							}
 						case RegistryType.MultiString:
-							{	// Handle REG_MULTI_SZ
+							{	// Make sure it's really a string; display binary otherwise
+								if (0 != (info.Length % 2))
+								{
+									byte[] binary;
+									if (NativeRegistry.ReadBinary(hk, path, info.Name, out binary))
+									{
+										if (null != binary)
+										{
+											buildHexTable(build, binary);
+										}
+										else
+										{	// No data!
+											build.Append("<i>NULL</i>");
+										}
+									}
+									else
+									{	// Error reading data
+										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+									}
+									break;
+								}
+								// Handle REG_MULTI_SZ
 								String[] data;
 								if (NativeRegistry.ReadMultiString(hk, path, info.Name, out data)
 									&& (data != null) && (data.Length > 0))
@@ -344,91 +428,74 @@ namespace WebAccess
 								}
 								break;
 							}
-						default:
-							{	// Handle all other data types as if REG_BINARY
-								if ((RegistryType.Binary == info.Type) && (4 == info.Length))
+						case RegistryType.Binary:
+							{	// Handle REG_BINARY
+								switch (info.Length)
 								{
-									// Treat it as a DWORD
-									uint data;
-									if (NativeRegistry.ReadDWORD(hk, path, info.Name, out data))
-									{
-										build.Append(data).AppendFormat(" (0x{0:X8})", data);
+								case 4:
+									{	// Treat it as a DWORD
+										uint data;
+										if (NativeRegistry.ReadDWORD(hk, path, info.Name, out data))
+										{
+											build.Append(data).AppendFormat(" (0x{0:X8})", data);
+										}
+										break;
 									}
-								}
-								else if ((RegistryType.Binary == info.Type) && (8 == info.Length))
+								case 8:
+									{	// Treat it as a QWORD
+										ulong data;
+										if (NativeRegistry.ReadQWORD(hk, path, info.Name, out data))
+										{
+											DateTime date = DateTime.FromFileTime((long)data);
+											build.Append(data).AppendFormat(" (0x{0:X16}) (", data).Append(date.ToString()).Append(')');
+										}
+										break;
+									}
+								default:
+									{	// Display as a binary hex sequence
+										byte[] data;
+										if (NativeRegistry.ReadBinary(hk, path, info.Name, out data))
+										{
+											if (null != data)
+											{
+												buildHexTable(build, data);
+											}
+											else
+											{	// No data!
+												build.Append("<i>NULL</i>");
+											}
+										}
+										else
+										{	// Error reading data
+											build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+										}
+										break;
+									}
+								} // End of info.length switch
+								break;
+							}
+						default:
+							{	// Handle arbitrary value types
+								byte[] data;
+								RegistryType type;
+								if (NativeRegistry.QueryValue(hk, path, info.Name, out type, out data))
 								{
-									// Treat it as a QWORD
-									ulong data;
-									if (NativeRegistry.ReadQWORD(hk, path, info.Name, out data))
+									if (null != data)
 									{
-										// TODO: Display the DATETIME value in readable format
-										build.Append(data);
+										buildHexTable(build, data);
+									}
+									else
+									{	// No data!
+										build.Append("<i>NULL</i>");
 									}
 								}
 								else
-								{
-									// Display as a binary hex sequence
-									byte[] data;
-									if (NativeRegistry.ReadBinary(hk, path, info.Name, out data))
-									{
-										if (null != data)
-										{
-											// Use a table layout
-											int linestart = 0;
-											build.Append("<pre>");
-											for (int i = 0; i < data.Length; i++)
-											{
-												build.AppendFormat("{0:X2} ", data[i]);
-												if (15 == (i & 15))
-												{
-													build.Append("| ");
-													// After every 16th value, print the text line
-													for (; linestart <= i; linestart++)
-													{
-														if ((data[linestart] >= 32) && (data[linestart] < 127))
-														{
-															build.Append((char)(data[linestart]));
-														}
-														else
-														{
-															build.Append("&#xB7;");
-														}
-													}
-													build.AppendLine();
-												}
-											}
-											// The last line may not have been a full 16 bytes
-											int emptybytes = 16 - (data.Length - linestart);
-											if (emptybytes < 16)
-											{
-												build.Append(' ', 3 * emptybytes).Append("| ");
-												for (; linestart < (data.Length); linestart++)
-												{
-													if ((data[linestart] >= 32) && (data[linestart] < 127))
-													{
-														build.Append((char)(data[linestart]));
-													}
-													else
-													{
-														build.Append("&#xB7;");
-													}
-												}
-											}
-											build.AppendLine("</pre>");
-										}
-										else
-										{	// No data!
-											build.Append("<i>NULL</i>");
-										}
-									}
-									else
-									{	// Error reading data
-										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
-									}
+								{	// Error reading data
+									build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
 								}
 								break;
 							}
-						}
+						}	// End of info.type switch
 						build.AppendLine("</td></tr>");
 					}
 					build.AppendLine("</table>");
@@ -443,6 +510,51 @@ namespace WebAccess
 <a href='/Registry?hive=80000002&path=SOFTWARE\Microsoft\DeviceReg\Install'>Dev-unlock info</a><br />
 <a href='/Registry?hive=80000001&path='>Current User registry hive</a><br />";
 			}
+		}
+		
+		private static void buildHexTable (StringBuilder build, byte[] data)
+		{	// Use a table layout
+			int linestart = 0;
+			build.Append("<pre>");
+			for (int i = 0; i < data.Length; i++)
+			{
+				build.AppendFormat("{0:X2} ", data[i]);
+				if (15 == (i & 15))
+				{
+					build.Append("| ");
+					// After every 16th value, print the text line
+					for (; linestart <= i; linestart++)
+					{
+						if ((data[linestart] >= 32) && (data[linestart] < 127))
+						{
+							build.Append((char)(data[linestart]));
+						}
+						else
+						{
+							build.Append("&#xB7;");
+						}
+					}
+					build.AppendLine();
+				}
+			}
+			// The last line may not have been a full 16 bytes
+			int emptybytes = 16 - (data.Length - linestart);
+			if (emptybytes < 16)
+			{
+				build.Append(' ', 3 * emptybytes).Append("| ");
+				for (; linestart < (data.Length); linestart++)
+				{
+					if ((data[linestart] >= 32) && (data[linestart] < 127))
+					{
+						build.Append((char)(data[linestart]));
+					}
+					else
+					{
+						build.Append("&#xB7;");
+					}
+				}
+			}
+			build.AppendLine("</pre>");
 		}
 
 		private static StringBuilder readFile (String file)

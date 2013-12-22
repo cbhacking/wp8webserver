@@ -2,7 +2,7 @@
  * WebAccess\MainPage.xaml.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.4
+ * Version: 0.4.9
  * Source: https://wp8webserver.codeplex.com
  *
  * Finds the WiFi address, displays the URL, and starts the web server.
@@ -10,7 +10,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO.IsolatedStorage;
 using System.Net;
 using System.Windows;
 using System.Windows.Controls;
@@ -27,8 +27,9 @@ namespace WebAccess
 {
 	public partial class MainPage : PhoneApplicationPage
 	{
+		static IsolatedStorageSettings settings = IsolatedStorageSettings.ApplicationSettings;
 		static WebServer server = null;
-		static ushort port = 9999;
+		static ushort port;
 
 		// Constructor
 		public MainPage ()
@@ -39,40 +40,63 @@ namespace WebAccess
 			//BuildLocalizedApplicationBar();
 		}
 
-		private void PhoneApplicationPage_Loaded (object sender, RoutedEventArgs e)
+		protected override void OnNavigatedTo(NavigationEventArgs e)
 		{
-			UpdatePort();
-			foreach (HostName name in NetworkInformation.GetHostNames())
-			{
-				if (name.IPInformation.NetworkAdapter.IanaInterfaceType == 71)
-				{
-					ServerUrl.Text = "http://" + name.CanonicalName + ":" + port;
-					break;
-				}
-			}
-			try
-			{
-				if (null == server)
-				{
-					server = new WebServer(port, WebApplication.ServiceRequest);
-				}
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show("Unable to start HTTP listener!\nException: " + ex.ToString());
-				Application.Current.Terminate();
-			}
+			base.OnNavigatedTo(e);
+			ServerUrl.Text = "Server is starting...";
+			GetPort();
+			StartServer();
 		}
 
 		private void UpdatePort ()
 		{
 			if (ushort.TryParse(PortText.Text, out port))
 			{
+				settings["port"] = port;
 			}
 			else
 			{
-				MessageBox.Show("Unable to parse port number!");
+				MessageBox.Show("Port must be a number less than " + ushort.MaxValue + "!");
+				GetPort();
+			}
+		}
+
+		private void GetPort ()
+		{
+			if (!(settings.Contains("port") &&
+				ushort.TryParse(settings["port"].ToString(), out port)))
+			{
+				// Parsing the port failed!
 				port = 9999;
+				settings["port"] = port;
+			}
+			PortText.Text = port.ToString();
+		}
+
+		private void StartServer ()
+		{
+			try
+			{
+				if (null != server)
+				{
+					server.Close();
+					server = null;
+					GC.Collect();
+				}
+				foreach (HostName name in NetworkInformation.GetHostNames())
+				{
+					if (name.IPInformation.NetworkAdapter.IanaInterfaceType == 71)
+					{
+						ServerUrl.Text = "http://" + name.CanonicalName + ":" + port;
+						break;
+					}
+				}
+				server = new WebServer(port, WebApplication.ServiceRequest);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show("Unable to start HTTP listener!\nException: " + ex.ToString());
+				Application.Current.Terminate();
 			}
 		}
 
@@ -80,32 +104,7 @@ namespace WebAccess
 		{
 			ServerUrl.Text = "Restarting server...";
 			UpdatePort();
-			if (null != server)
-			{
-				server.Close();
-				server = null;
-				GC.Collect();
-			}
-			try
-			{
-				if (null == server)
-				{
-					server = new WebServer(port, WebApplication.ServiceRequest);
-				}
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show("Unable to start HTTP listener!\nException: " + ex.ToString());
-				Application.Current.Terminate();
-			}
-			foreach (HostName name in NetworkInformation.GetHostNames())
-			{
-				if (name.IPInformation.NetworkAdapter.IanaInterfaceType == 71)
-				{
-					ServerUrl.Text = "http://" + name.CanonicalName + ":" + port;
-					break;
-				}
-			}
+			StartServer();
 		}
 
 		// Sample code for building a localized ApplicationBar

@@ -176,4 +176,7 @@
   </Target>
   -->
   <ProjectExtensions />
+  <Target Name="ValidateWMAppManifest">
+    <!-- Do nothing -->
+  </Target>
 </Project>
