@@ -2,7 +2,7 @@
  * HttpServer\Properties\AssemblyInfo.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.3
+ * Version: 0.3.5
  * Source: https://wp8webserver.codeplex.com
  *
  * Sets assembly metadata
@@ -42,6 +42,6 @@ using System.Resources;
 //
 // You can specify all the values or you can default the Revision and Build Numbers 
 // by using the '*' as shown below:
-[assembly: AssemblyVersion("0.3.3.*")]
-[assembly: AssemblyFileVersion("0.3.3")]
+[assembly: AssemblyVersion("0.3.5.*")]
+[assembly: AssemblyFileVersion("0.3.5")]
 [assembly: NeutralResourcesLanguageAttribute("en-US")]

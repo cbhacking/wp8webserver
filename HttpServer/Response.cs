@@ -2,10 +2,10 @@
  * HttpServer\Response.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.3
+ * Version: 0.3.5
  * Source: https://wp8webserver.codeplex.com
  *
- * Template to construct an HTTP response. Not used directly by the server.
+ * Template to construct an HTTP response.
  */
 
 using System;
@@ -121,10 +121,10 @@ namespace HttpServer
 		/// Useful when an amount of data too large for a single send (such as a large file) needs to be sent.
 		/// </summary>
 		/// <param name="contentlength">Desired value of the Content-Length header. Header won't be added if 0</param>
-		public void SendHeaders (long contentlength)
+		public void SendHeaders (ulong contentlength)
 		{
 			AutoResetEvent reset = new AutoResetEvent(false);
-			if (contentlength > 0)
+			if (contentlength > 0UL)
 			{
 				headers["Content-Length"] = contentlength.ToString();
 			}

@@ -2,7 +2,7 @@
  * HttpServer\Listener.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.3
+ * Version: 0.3.5
  * Source: https://wp8webserver.codeplex.com
  *
  * Implements the listener portion of an HTTP server.
@@ -27,6 +27,7 @@ namespace HttpServer
 		Socket serversock;
 		Thread listenthread;
 		RequestServicer servicer;
+		CancellationTokenSource cancelsource;
 
 		/// <summary>
 		/// Starts a new WebServer that listens on all connections at the specified port.
@@ -46,6 +47,7 @@ namespace HttpServer
 			EndPoint local = new IPEndPoint(IPAddress.Any, port);
 			serversock.Bind(local);
 			serversock.Listen(5);
+			cancelsource = new CancellationTokenSource();
 			listenthread = new Thread(listener);
 			listenthread.Start();
 		}
@@ -57,6 +59,7 @@ namespace HttpServer
 
 		public void Close ()
 		{
+			cancelsource.Cancel();
 			if (listenthread.IsAlive)
 			{
 				listenthread.Abort();
@@ -70,18 +73,34 @@ namespace HttpServer
 
 		private void listener ()
 		{
-			while (true)
+			AutoResetEvent acceptreset = new AutoResetEvent(false);
+			while (!cancelsource.IsCancellationRequested)
 			{
 				SocketAsyncEventArgs args = new SocketAsyncEventArgs();
-				args.Completed += (sender, args2) =>
+				args.Completed += (sender, completedargs) =>
 				{
-					new Thread(handler).Start(args2.AcceptSocket);
+					accepter(completedargs);
+					// Resume the listen loop
+					acceptreset.Set();
 				};
-				if (!serversock.AcceptAsync(args))
+				if (serversock.AcceptAsync(args))
 				{
-					// The operation completed synchronously, so it didn't raise the event
-					new Thread(handler).Start(args.AcceptSocket);
+					// Operation is pending, and will fire the Completed event
+					acceptreset.WaitOne();
 				}
+				else
+				{
+					// Accepted synchronously, so it didn't raise the event
+					accepter(args);
+				}
+			}
+		}
+
+		private void accepter (SocketAsyncEventArgs args)
+		{
+            if (args.SocketError == SocketError.Success)
+            {
+				new Thread(handler).Start(args.AcceptSocket);
 			}
 		}
 
@@ -132,7 +151,7 @@ namespace HttpServer
 		/// <returns>The UTF-8 encoded string read from the socket</returns>
 		private String getData (Socket sock)
 		{
-			EventWaitHandle wait = new EventWaitHandle(false, EventResetMode.AutoReset);
+			AutoResetEvent wait = new AutoResetEvent(false);
 			SocketAsyncEventArgs args = new SocketAsyncEventArgs();
 			byte[] buffer = new byte[1 << 20];
 			args.SetBuffer(buffer, 0, (1 << 20));
