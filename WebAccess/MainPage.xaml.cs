@@ -2,10 +2,11 @@
  * WebAccess\MainPage.xaml.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.9
+ * Version: 0.5.0
  * Source: https://wp8webserver.codeplex.com
  *
  * Finds the WiFi address, displays the URL, and starts the web server.
+ * Allows the user to change the port number and to enable background serving.
  */
 
 using System;
@@ -17,9 +18,10 @@ using System.Windows.Controls;
 using System.Windows.Navigation;
 using Microsoft.Phone.Controls;
 using Microsoft.Phone.Shell;
-using WebAccess.Resources;
 using Windows.Networking;
 using Windows.Networking.Connectivity;
+using Windows.Devices.Geolocation;
+using WebAccess.Resources;
 
 using HttpServer;
 
@@ -43,9 +45,12 @@ namespace WebAccess
 		protected override void OnNavigatedTo(NavigationEventArgs e)
 		{
 			base.OnNavigatedTo(e);
-			ServerUrl.Text = "Server is starting...";
-			GetPort();
-			StartServer();
+			if (!App.serverRunning)
+			{
+				ServerUrl.Text = "Server is starting...";
+				GetPort();
+				StartServer();
+			}
 		}
 
 		private void UpdatePort ()
@@ -77,11 +82,9 @@ namespace WebAccess
 		{
 			try
 			{
-				if (null != server)
+				if (App.serverRunning)
 				{
-					server.Close();
-					server = null;
-					GC.Collect();
+					StopServer();
 				}
 				foreach (HostName name in NetworkInformation.GetHostNames())
 				{
@@ -92,6 +95,7 @@ namespace WebAccess
 					}
 				}
 				server = new WebServer(port, WebApplication.ServiceRequest);
+				App.serverRunning = true;
 			}
 			catch (Exception ex)
 			{
@@ -100,11 +104,42 @@ namespace WebAccess
 			}
 		}
 
+		static void StopServer ()
+		{
+			server.Close();
+			server = null;
+			App.serverRunning = false;
+			GC.Collect();
+		}
+
 		private void RestartButton_Click (object sender, RoutedEventArgs e)
 		{
 			ServerUrl.Text = "Restarting server...";
 			UpdatePort();
 			StartServer();
+		}
+
+		private void EnableBackground_Checked (object sender, RoutedEventArgs e)
+		{
+			if (null == App.geolocator)
+			{
+				App.geolocator = new Geolocator();
+				App.geolocator.DesiredAccuracyInMeters = 100000;	// 100 KM; coarse for low power
+				App.geolocator.MovementThreshold = 100000;			// 100 KM
+				App.geolocator.ReportInterval = 1000000000;			// Approximately 11.5 days
+				App.geolocator.PositionChanged += geolocator_PositionChanged;
+			}
+		}
+
+		private void EnableBackground_Unchecked (object sender, RoutedEventArgs e)
+		{
+			App.geolocator.PositionChanged -= geolocator_PositionChanged;
+			App.geolocator = null;
+		}
+
+		void geolocator_PositionChanged (Geolocator sender, PositionChangedEventArgs args)
+		{
+			// NOOP
 		}
 
 		// Sample code for building a localized ApplicationBar

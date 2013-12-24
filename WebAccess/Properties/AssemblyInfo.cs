@@ -7,7 +7,7 @@ using System.Resources;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("WebAccess")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("NativeAccess Web Server")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("WebServer")]
@@ -32,6 +32,6 @@ using System.Resources;
 //
 // You can specify all the values or you can default the Revision and Build Numbers 
 // by using the '*' as shown below:
-[assembly: AssemblyVersion("0.4.9")]
-[assembly: AssemblyFileVersion("0.4.9")]
+[assembly: AssemblyVersion("0.5.0")]
+[assembly: AssemblyFileVersion("0.5.0.*")]
 [assembly: NeutralResourcesLanguageAttribute("en-US")]

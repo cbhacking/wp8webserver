@@ -2,7 +2,7 @@
  * WebAccess\App.xaml.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.3
+ * Version: 0.5.0
  * Source: https://wp8webserver.codeplex.com
  *
  * Application-wide configuration (mostly disabling idle detection).
@@ -16,6 +16,7 @@ using System.Windows.Markup;
 using System.Windows.Navigation;
 using Microsoft.Phone.Controls;
 using Microsoft.Phone.Shell;
+using Windows.Devices.Geolocation;
 using WebAccess.Resources;
 
 namespace WebAccess
@@ -27,6 +28,9 @@ namespace WebAccess
 		/// </summary>
 		/// <returns>The root frame of the Phone Application.</returns>
 		public static PhoneApplicationFrame RootFrame { get; private set; }
+
+		public static Geolocator geolocator;
+		public static bool serverRunning = false;
 
 		/// <summary>
 		/// Constructor for the Application object.
@@ -87,6 +91,13 @@ namespace WebAccess
 		// This code will not execute when the application is deactivated
 		private void Application_Closing (object sender, ClosingEventArgs e)
 		{
+		}
+
+
+		private void Application_RunningInBackground (object sender, RunningInBackgroundEventArgs args)
+		{
+			//RunningInBackground = true;
+			// Suspend all unnecessary processing such as UI updates
 		}
 
 		// Code to execute if a navigation fails

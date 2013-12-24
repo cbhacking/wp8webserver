@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Deployment xmlns="http://schemas.microsoft.com/windowsphone/2012/deployment" AppPlatformVersion="8.0">
   <DefaultLanguage xmlns="" code="en-US" />
-  <App xmlns="" ProductID="{7bbc8703-fb43-4e9e-88c9-62957ea0d59b}" Title="WebServer Native Access" RuntimeType="Silverlight" Version="0.4.9" Genre="apps.normal" Author="GoodDayToDie" Description="Browse your phone's file system and registry over WiFi using a web browser." Publisher="GoodDayToDie via XDA-Developers forum" PublisherID="{1362529f-b4ff-41e9-9651-40134086d0fa}">
+  <App xmlns="" ProductID="{7bbc8703-fb43-4e9e-88c9-62957ea0d59b}" Title="WebServer Native Access" RuntimeType="Silverlight" Version="0.5.0" Genre="apps.normal" Author="GoodDayToDie" Description="Browse your phone's file system and registry over WiFi using a web browser." Publisher="GoodDayToDie via XDA-Developers forum" PublisherID="{1362529f-b4ff-41e9-9651-40134086d0fa}">
     <IconPath IsRelative="true" IsResource="false">Assets\ApplicationIcon.png</IconPath>
     <Capabilities>
       <!-- Actually required -->
@@ -29,7 +29,7 @@
       <Capability Name="ID_CAP_WALLET" />
       <Capability Name="ID_CAP_WALLET_PAYMENTINSTRUMENTS" />
       <Capability Name="ID_CAP_WEBBROWSERCOMPONENT" />
-      <!-- The following require interop-unlock and capability-unlock
+      <!-- The following require interop-unlock and capability-unlock -->
       <Capability Name="ID_CAP_ACCESS_FAMILY_NOTES_API" />
       <Capability Name="ID_CAP_APPPREINSTALL_DIRECTORY" />
       <Capability Name="ID_CAP_BINGCLIENT_OSS" />
@@ -69,10 +69,14 @@
       <Capability Name="ID_CAP_TELEMETRY_ADMIN" />
       <Capability Name="ID_CAP_WIFI_ADMIN" />
       <Capability Name="ID_CAP_WPTOOLS_INSTALL_FOLDER" />
-      -->
+      <!-- -->
     </Capabilities>
     <Tasks>
-      <DefaultTask Name="_default" NavigationPage="MainPage.xaml" />
+      <DefaultTask Name="_default" NavigationPage="MainPage.xaml">
+        <BackgroundExecution>
+          <ExecutionType Name="LocationTracking"/>
+        </BackgroundExecution>
+      </DefaultTask>
     </Tasks>
     <Tokens>
       <PrimaryToken TokenID="WebAccessToken" TaskName="_default">

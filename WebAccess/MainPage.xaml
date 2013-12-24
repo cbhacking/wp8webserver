@@ -52,6 +52,7 @@
             <Button x:Name="RestartButton" Content="Restart server" HorizontalAlignment="Left" Margin="10,119,0,0" VerticalAlignment="Top" Width="436" Click="RestartButton_Click"/>
             <TextBox x:Name="PortText" HorizontalAlignment="Left" Height="72" TextWrapping="Wrap" Text="9999" VerticalAlignment="Top" Width="247" Margin="209,42,0,0" InputScope="Number"/>
             <TextBlock HorizontalAlignment="Left" TextWrapping="Wrap" Text="Specify port number:" VerticalAlignment="Top" RenderTransformOrigin="0.939,2.926" Margin="10,67,0,0"/>
+            <CheckBox x:Name="EnableBackground" Content="Run in background" HorizontalAlignment="Left" Margin="10,196,0,0" VerticalAlignment="Top" Checked="EnableBackground_Checked" Unchecked="EnableBackground_Unchecked"/>
 
         </Grid>
 
