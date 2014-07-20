@@ -1,6 +1,6 @@
 ﻿
     <form action="/Filesystem" method="get">
-        Path: <input type="text" name="path" value="{PATH}" size="50" />
+        Path: <input type="text" name="path" value="{PATH}" size="50" onfocus="checkPath()" />
         <input type="hidden" name="pattern" value="*" />
         <input type="submit" name="getFiles" value="List Files" />
     </form>
@@ -11,6 +11,14 @@
                 params[key] = value;
             }
         );
-        document.forms[0].path.value = decodeURIComponent(params["path"].replace("+", " "));
+        if (params["path"]) {
+            document.forms[0].path.value = decodeURIComponent(params["path"].replace("+", " "));
+        }
+
+        function checkPath() {
+            var pvalue = document.forms[0].path.value;
+            if ("{PATH}" == pvalue)
+                document.forms[0].path.value = "";
+        }
     </script>
     <p><br />{CONTENT}</p>

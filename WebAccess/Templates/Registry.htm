@@ -9,7 +9,7 @@
             <option value="80000004">HKEY_PERFORMANCE_DATA</option>
             <option value="80000005">HKEY_CURRENT_CONFIG</option>
         </select>
-        <input type="text" name="path" value="{PATH}" size="50" />
+        <input type="text" name="path" value="{PATH}" size="50" onfocus="checkPath()" />
         <input type="submit" name="openKey" value="View Key" />
     </form>
     <script type="text/javascript">
@@ -26,7 +26,15 @@
                 break;
             }
         }
-        document.forms[0].path.value = decodeURIComponent(params["path"].replace("+", " "));
+        if (params["path"]) {
+            document.forms[0].path.value = decodeURIComponent(params["path"].replace("+", " "));
+        }
+
+        function checkPath() {
+            var pvalue = document.forms[0].path.value;
+            if ("{PATH}" == pvalue)
+                document.forms[0].path.value = "";
+        }
     </script>
     <br />
 {CONTENT}

@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.9
+ * Version: 0.5.1
  * Source: https://wp8webserver.codeplex.com
  *
  * Handles GET requests from the web server.
@@ -192,7 +192,7 @@ namespace WebAccess
 						// Send while we read the next part of the file
 						SocketAsyncEventArgs args = new SocketAsyncEventArgs();
 						args.SetBuffer(data, 0, data.Length);
-						args.Completed += (sender, args2) => {reset.Set();};
+						args.Completed += (sender, args2) => { reset.Set(); };
 						if (!sock.SendAsync(args))
 							reset.Set();
 						offset += data.Length;
@@ -214,30 +214,49 @@ namespace WebAccess
 				String dirs = nfs.GetFileNames(search, false, true);
 				if (null == dirs)
 				{
-					String error = "An error occurred while querying directory list.<br />The error number is " + 
+					String error = "An error occurred while querying directory list.<br />The error number is " +
 					"<a href=\"http://msdn.microsoft.com/en-us/library/windows/desktop/ms681381(v=vs.85).aspx\">" +
 						nfs.GetError() + "</a>";
 					return error;
 				}
-				String[] array = dirs.Split(new char[] {'|'}, StringSplitOptions.RemoveEmptyEntries);
+				String[] array = dirs.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
 				StringBuilder build = new StringBuilder("<table>");
 				foreach (String name in array)
 				{
-					build.AppendFormat(
-						"<tr><td>DIR</td><td><a href=\"/Filesystem?path={0}{1}&pattern={2}\">{1}</a></td></tr>",
-						path, name, pattern);
+					// Suppress . and treat .. specially
+					if (name.Equals("."))
+						continue;
+					if (name.Equals(".."))
+					{
+						build.AppendFormat(
+							"<tr><td>DIR</td><td><a href=\"/Filesystem?path={0}&pattern={2}\">{1}</a></td></tr>",
+							Path.GetDirectoryName(path.Substring(0, path.Length - 1)), name, pattern);
+					}
+					else
+					{
+						build.AppendFormat(
+							"<tr><td>DIR</td><td><a href=\"/Filesystem?path={0}{1}&pattern={2}\">{1}</a></td></tr>",
+							path, name, pattern);
+					}
 				}
 				// Get files, and hyperlink them for download
 				FileInfo[] files = nfs.GetFiles(search, false);
 				// Check to make sure that there just aren't any files, which apparently also returns null...
-				if ((null == files) && (nfs.GetError() != 0))
+				if (null == files || (0 == files.Length))
 				{
-					String error = "An error occurred while querying file list.<br />The error number is " +
-					"<a href=\"http://msdn.microsoft.com/en-us/library/windows/desktop/ms681381(v=vs.85).aspx\">" +
-						nfs.GetError() + "</a>";
-					return error;
+					if (nfs.GetError() != 0)
+					{
+						String error = "An error occurred while querying file list.<br />The error number is " +
+						"<a href=\"http://msdn.microsoft.com/en-us/library/windows/desktop/ms681381(v=vs.85).aspx\">" +
+							nfs.GetError() + "</a>";
+						return error;
+					}
+					else
+					{
+						build.AppendLine("<h4>There are no files in this directory.</h4>");
+					}
 				}
-				if (null != files)
+				else
 				{
 					foreach (FileInfo info in files)
 					{
@@ -249,7 +268,22 @@ namespace WebAccess
 				return build.Append("</table>").ToString();
 			}
 			else
-				return null;	// No path, this should never happen...
+			{
+				// Build the landing page for Filesystem
+				String[] drives = nfs.GetDriveLetters();
+				StringBuilder build = new StringBuilder("<h4>The root of the C: drive is generally inaccessible.</h4><table>");
+				foreach (String drive in drives)
+				{
+					if (drive.Equals("C:\\"))
+						build.AppendLine("<tr><td><a href=\"/Filesystem?path=C:\\Windows\\&pattern=*\">C:\\Windows\\</a></td></tr>");
+					else
+					{
+						build.AppendFormat("<tr><td><a href=\"/Filesystem?path={0}&pattern=*\">{0}</a></td></tr>\n", drive);
+					}
+				}
+				build.Append("</table>");
+				return build.ToString();
+			}
 		}
 
 		private static String serviceRegistry (HttpRequest req, Socket sock)
@@ -290,6 +324,10 @@ namespace WebAccess
 							.Append(key).AppendLine("</a></td></tr>");
 					}
 					build.AppendLine("</table>");
+				}
+				else
+				{
+					build.AppendLine("<h4>This key has no subkeys.</h4>");
 				}
 				if (values != null && values.Length > 0)
 				{
@@ -499,6 +537,10 @@ namespace WebAccess
 						build.AppendLine("</td></tr>");
 					}
 					build.AppendLine("</table>");
+				}
+				else
+				{
+					build.AppendLine("<h4>This key contains no values.</h4>");
 				}
 				return build.ToString();
 			}
