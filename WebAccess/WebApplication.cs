@@ -426,8 +426,16 @@ namespace WebAccess
 								ulong data;
 								if (NativeRegistry.ReadQWORD(hk, path, info.Name, out data))
 								{
-									DateTime date = DateTime.FromFileTime((long)data);
-									build.Append(data).AppendFormat(" (0x{0:X16}) (", data).Append(date.ToString()).Append(')');
+									try
+									{
+										DateTime date = DateTime.FromFileTime((long)data);
+										build.Append(data).AppendFormat(" (0x{0:X16}) (", data).Append(date.ToString()).Append(')');
+									}
+									catch (ArgumentOutOfRangeException)
+									{
+										// It's not a date...
+										build.Append(data).AppendFormat(" (0x{0:X16})", data);
+									}
 								}
 								break;
 							}
@@ -484,8 +492,16 @@ namespace WebAccess
 										ulong data;
 										if (NativeRegistry.ReadQWORD(hk, path, info.Name, out data))
 										{
-											DateTime date = DateTime.FromFileTime((long)data);
-											build.Append(data).AppendFormat(" (0x{0:X16}) (", data).Append(date.ToString()).Append(')');
+											try
+											{
+												DateTime date = DateTime.FromFileTime((long)data);
+												build.Append(data).AppendFormat(" (0x{0:X16}) (", data).Append(date.ToString()).Append(')');
+											}
+											catch (ArgumentOutOfRangeException)
+											{
+												// It's not a date...
+												build.Append(data).AppendFormat(" (0x{0:X16})", data);
+											}
 										}
 										break;
 									}
