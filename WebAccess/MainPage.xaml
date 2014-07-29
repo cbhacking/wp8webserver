@@ -48,7 +48,7 @@
         <!--ContentPanel - place additional content here-->
         <Grid x:Name="ContentPanel" Grid.Row="1" Margin="12,0,12,0">
             <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" Text="Server URL: " VerticalAlignment="Top" Foreground="Gray"/>
-            <TextBlock x:Name="ServerUrl" HorizontalAlignment="Left" Margin="121,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Text="No WiFi Connection!"/>
+            <HyperlinkButton x:Name="ServerUrl" HorizontalAlignment="Left" Margin="121,10,0,0" VerticalAlignment="Top" Content="No WiFi Connection!" Click="ServerUrl_Click" />
             <Button x:Name="RestartButton" Content="Restart server" HorizontalAlignment="Left" Margin="10,119,0,0" VerticalAlignment="Top" Width="436" Click="RestartButton_Click"/>
             <TextBox x:Name="PortText" HorizontalAlignment="Left" Height="72" TextWrapping="Wrap" Text="9999" VerticalAlignment="Top" Width="247" Margin="209,42,0,0" InputScope="Number"/>
             <TextBlock HorizontalAlignment="Left" TextWrapping="Wrap" Text="Specify port number:" VerticalAlignment="Top" RenderTransformOrigin="0.939,2.926" Margin="10,67,0,0"/>

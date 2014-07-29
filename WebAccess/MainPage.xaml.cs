@@ -2,7 +2,7 @@
  * WebAccess\MainPage.xaml.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.0
+ * Version: 0.5.2
  * Source: https://wp8webserver.codeplex.com
  *
  * Finds the WiFi address, displays the URL, and starts the web server.
@@ -21,6 +21,7 @@ using Microsoft.Phone.Shell;
 using Windows.Networking;
 using Windows.Networking.Connectivity;
 using Windows.Devices.Geolocation;
+using Windows.System;
 using WebAccess.Resources;
 
 using HttpServer;
@@ -47,7 +48,7 @@ namespace WebAccess
 			base.OnNavigatedTo(e);
 			if (!App.serverRunning)
 			{
-				ServerUrl.Text = "Server is starting...";
+				ServerUrl.Content = "Server is starting...";
 				GetPort();
 				StartServer();
 			}
@@ -90,7 +91,7 @@ namespace WebAccess
 				{
 					if (name.IPInformation.NetworkAdapter.IanaInterfaceType == 71)
 					{
-						ServerUrl.Text = "http://" + name.CanonicalName + ":" + port;
+						ServerUrl.Content = "http://" + name.CanonicalName + ":" + port;
 						break;
 					}
 				}
@@ -114,20 +115,27 @@ namespace WebAccess
 
 		private void RestartButton_Click (object sender, RoutedEventArgs e)
 		{
-			ServerUrl.Text = "Restarting server...";
+			ServerUrl.Content = "Restarting server...";
 			UpdatePort();
 			StartServer();
 		}
 
 		private void EnableBackground_Checked (object sender, RoutedEventArgs e)
 		{
-			if (null == App.geolocator)
+			try
 			{
-				App.geolocator = new Geolocator();
-				App.geolocator.DesiredAccuracyInMeters = 100000;	// 100 KM; coarse for low power
-				App.geolocator.MovementThreshold = 100000;			// 100 KM
-				App.geolocator.ReportInterval = 1000000000;			// Approximately 11.5 days
-				App.geolocator.PositionChanged += geolocator_PositionChanged;
+				if (null == App.geolocator)
+				{
+					App.geolocator = new Geolocator();
+					App.geolocator.DesiredAccuracyInMeters = 100000;	// 100 KM; coarse for low power
+					App.geolocator.MovementThreshold = 100000;			// 100 KM
+					App.geolocator.ReportInterval = 1000000000;			// Approximately 11.5 days
+					App.geolocator.PositionChanged += geolocator_PositionChanged;
+				}
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(ex.ToString(), "Unable to enable background processing", MessageBoxButton.OK);
 			}
 		}
 
@@ -140,6 +148,30 @@ namespace WebAccess
 		void geolocator_PositionChanged (Geolocator sender, PositionChangedEventArgs args)
 		{
 			// NOOP
+		}
+
+		private void ServerUrl_Click (object sender, RoutedEventArgs e)
+		{
+			if (!App.serverRunning)
+			{
+				MessageBox.Show("Server is not running!");
+				return;
+			}
+			if (!EnableBackground.IsChecked.GetValueOrDefault(false))
+			{
+				if (MessageBoxResult.OK == MessageBox.Show(
+					"Opening a web browser will close the server unless it is set to run in the background. Do you want to enable background mode now?",
+					"Background mode not enabled", MessageBoxButton.OKCancel))
+				{
+					EnableBackground.IsChecked = true;
+					EnableBackground_Checked(null, null);
+				}
+				else
+				{
+					return;
+				}
+			}
+			Launcher.LaunchUriAsync(new Uri(ServerUrl.Content.ToString()));
 		}
 
 		// Sample code for building a localized ApplicationBar

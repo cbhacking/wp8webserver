@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.1
+ * Version: 0.5.2
  * Source: https://wp8webserver.codeplex.com
  *
  * Handles GET requests from the web server.
@@ -21,6 +21,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Resources;
 using System.Globalization;
+using Windows.ApplicationModel;
+using Windows.Storage;
 
 using HttpServer;
 using FileSystem;
@@ -154,8 +156,23 @@ namespace WebAccess
 			if (req.UrlParameters.ContainsKey("path"))
 			{
 				String path = req.UrlParameters["path"];
+				if (String.IsNullOrWhiteSpace(path))
+				{
+					// Redirect to the root of the FileSystem node
+					HttpResponse.Redirect(sock, new Uri("/Filesystem", UriKind.Relative), req.Version);
+					return null;
+				}
 				if ('\\' != path[path.Length - 1])
 					path += '\\';
+				if (path.StartsWith(".\\"))
+				{
+					// Redirect to the actual path
+					HttpResponse.Redirect(sock, new Uri(req.Path + "?path=" + 
+						Package.Current.InstalledLocation.Path + (req.UrlParameters.ContainsKey("pattern") ?
+						"&pattern=" + req.UrlParameters["pattern"] : String.Empty), UriKind.Relative),
+						req.Version);
+					return null;
+				}
 				// Check for file download before checking for search pattern
 				if (req.UrlParameters.ContainsKey("download"))
 				{
@@ -271,17 +288,19 @@ namespace WebAccess
 			{
 				// Build the landing page for Filesystem
 				String[] drives = nfs.GetDriveLetters();
-				StringBuilder build = new StringBuilder("<h4>The root of the C: drive is generally inaccessible.</h4><table>");
+				StringBuilder build = new StringBuilder("<h4>The root of the C: drive is generally inaccessible.</h4><ul>");
 				foreach (String drive in drives)
 				{
 					if (drive.Equals("C:\\"))
-						build.AppendLine("<tr><td><a href=\"/Filesystem?path=C:\\Windows\\&pattern=*\">C:\\Windows\\</a></td></tr>");
+						build.AppendLine("<li><a href=\"/Filesystem?path=C:\\Windows\\&pattern=*\">C:\\Windows\\</a></li>");
 					else
 					{
-						build.AppendFormat("<tr><td><a href=\"/Filesystem?path={0}&pattern=*\">{0}</a></td></tr>\n", drive);
+						build.AppendFormat("<li><a href=\"/Filesystem?path={0}&pattern=*\">{0}</a></li>\n", drive);
 					}
 				}
-				build.Append("</table>");
+				build.AppendFormat("<li><a href=\"/Filesystem?path={0}&pattern=*\">App data directory</a></li>\n", ApplicationData.Current.LocalFolder.Path)
+					.AppendFormat("<li><a href=\"/Filesystem?path={0}&pattern=*\">App install directory</a></li>\n", Package.Current.InstalledLocation.Path);
+				build.AppendLine("</ul>");
 				return build.ToString();
 			}
 		}
@@ -293,7 +312,7 @@ namespace WebAccess
 			{
 				// Load the requested registry key
 				RegistryHive hk = (RegistryHive)int.Parse(req.UrlParameters["hive"], NumberStyles.AllowHexSpecifier);
-				String path = req.UrlParameters["path"];
+				String path = req.UrlParameters["path"].TrimEnd('\\');
 				String[] subkeys;
 				ValueInfo[] values;
 				if (!NativeRegistry.GetSubKeyNames(hk, path, out subkeys))
@@ -309,6 +328,12 @@ namespace WebAccess
 				}
 				// Build the HTML body
 				StringBuilder build = new StringBuilder();
+				if (!String.IsNullOrWhiteSpace(path))
+				{
+					build.AppendLine("<h4><a href=\"/Registry?hive=" + req.UrlParameters["hive"] + "&path=" +
+						(path.Contains('\\') ? path.Substring(0, path.LastIndexOf('\\')) : String.Empty) +
+						"\">Go to parent key</a></h4>");
+				}
 				if (subkeys != null && subkeys.Length > 0)
 				{
 					build.AppendLine("<table><tr><th>Keys</th></tr>");
