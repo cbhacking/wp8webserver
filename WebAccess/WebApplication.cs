@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.2
+ * Version: 0.5.3
  * Source: https://wp8webserver.codeplex.com
  *
  * Handles GET requests from the web server.
@@ -310,9 +310,18 @@ namespace WebAccess
 			if (req.UrlParameters.ContainsKey("hive") &&
 				req.UrlParameters.ContainsKey("path"))
 			{
-				// Load the requested registry key
 				RegistryHive hk = (RegistryHive)int.Parse(req.UrlParameters["hive"], NumberStyles.AllowHexSpecifier);
 				String path = req.UrlParameters["path"].TrimEnd('\\');
+				if (req.UrlParameters.ContainsKey("download"))
+				{
+					// Build a .REG file and upload it to the user
+					String file = RegTools.BuildRegFile(hk, path, "WP8.REG");
+					if (null != file)
+						HttpResponse.Redirect(sock,
+							"/Filesystem?path=" + Path.GetDirectoryName(file) + "&download=WP8.REG");
+					return null;
+				}
+				// Else, load the requested registry key
 				String[] subkeys;
 				ValueInfo[] values;
 				if (!NativeRegistry.GetSubKeyNames(hk, path, out subkeys))
