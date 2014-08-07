@@ -2,7 +2,7 @@
  * HttpServer\Response.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.5
+ * Version: 0.3.6
  * Source: https://wp8webserver.codeplex.com
  *
  * Template to construct an HTTP response.
@@ -50,10 +50,21 @@ namespace HttpServer
 		/// <param name="sock">The open, connected TCP socket through which the response will eventually be sent.</param>
 		/// <param name="redir">The URI to which the browser should be redirected. Can be absolute or relative.</param>
 		/// <param name="vers">The HTTP version to use for the response. Optional (defaults to 1.1)</param>
-		public HttpResponse (Socket sock, Uri redir, HttpVersion vers = HttpVersion.ONE_POINT_ONE)
+		public HttpResponse (Socket sock, String redir, HttpVersion vers = HttpVersion.ONE_POINT_ONE)
 			: this(sock, HttpStatusCode.Redirect, null, (byte[])null, vers)
 		{
-			headers["Location"] = redir.OriginalString;
+			headers["Location"] = redir;
+		}
+
+		/// <summary>
+		/// Create a redirection (HTTP 302) response. Does not send the response.
+		/// </summary>
+		/// <param name="sock">The open, connected TCP socket through which the response will eventually be sent.</param>
+		/// <param name="redir">The URI to which the browser should be redirected. Can be absolute or relative.</param>
+		/// <param name="vers">The HTTP version to use for the response. Optional (defaults to 1.1)</param>
+		public HttpResponse (Socket sock, Uri redir, HttpVersion vers = HttpVersion.ONE_POINT_ONE)
+			: this(sock, redir.OriginalString, vers)
+		{
 		}
 		#endregion
 
@@ -157,7 +168,7 @@ namespace HttpServer
 		/// <param name="url">The address to which the browser should be redirected.</param>
 		public static void Redirect (Socket sock, String url, HttpVersion version = HttpVersion.ONE_POINT_ONE)
 		{
-			new HttpResponse(sock, new Uri(url), version).Send();
+			new HttpResponse(sock, url, version).Send();
 		}
 		#endregion
 	}
