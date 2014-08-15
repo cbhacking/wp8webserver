@@ -2,7 +2,7 @@
  * WebAccess\MainPage.xaml.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.2
+ * Version: 0.5.4
  * Source: https://wp8webserver.codeplex.com
  *
  * Finds the WiFi address, displays the URL, and starts the web server.
@@ -87,14 +87,37 @@ namespace WebAccess
 				{
 					StopServer();
 				}
-				foreach (HostName name in NetworkInformation.GetHostNames())
+				do
 				{
-					if (name.IPInformation.NetworkAdapter.IanaInterfaceType == 71)
+					String v6 = null;
+					foreach (HostName name in NetworkInformation.GetHostNames())
 					{
-						ServerUrl.Content = "http://" + name.CanonicalName + ":" + port;
-						break;
+						if (name.IPInformation.NetworkAdapter.IanaInterfaceType == 71)
+						{
+							if (HostNameType.Ipv4 == name.Type)
+							{
+								ServerUrl.Content = "http://" + name.CanonicalName + ":" + port;
+								v6 = null;
+								break;
+							}
+							if (HostNameType.Ipv6 == name.Type)
+							{
+								v6 = "http://[" + name.CanonicalName.Replace("%", "%25") + "]:" + port;
+							}
+						}
 					}
-				}
+					if (null != v6)
+					{
+						if (MessageBoxResult.Cancel == MessageBox.Show(
+							"Unable to find an IPv4 address. An IPv6 address was found, though. Press OK to use it, or Cancel to search again.",
+							"Use IPv6 address?", MessageBoxButton.OKCancel))
+						{
+							// This is a stupid alternative to goto
+							continue;
+						}
+						ServerUrl.Content = v6;
+					}
+				} while (false);
 				server = new WebServer(port, WebApplication.ServiceRequest);
 				App.serverRunning = true;
 			}

@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.3
+ * Version: 0.5.4
  * Source: https://wp8webserver.codeplex.com
  *
  * Handles GET requests from the web server.
@@ -314,11 +314,11 @@ namespace WebAccess
 				String path = req.UrlParameters["path"].TrimEnd('\\');
 				if (req.UrlParameters.ContainsKey("download"))
 				{
-					// Build a .REG file and upload it to the user
-					String file = RegTools.BuildRegFile(hk, path, "WP8.REG");
+					// Build a .REG file (named based on the reg key) and upload it to the user
+					String file = RegTools.BuildRegFile(hk, path);
 					if (null != file)
 						HttpResponse.Redirect(sock,
-							"/Filesystem?path=" + Path.GetDirectoryName(file) + "&download=WP8.REG");
+							"/Filesystem?path=" + Path.GetDirectoryName(file) + "&download=" + Path.GetFileName(file));
 					return null;
 				}
 				// Else, load the requested registry key
@@ -369,8 +369,12 @@ namespace WebAccess
 					foreach (ValueInfo info in values)
 					{
 						String name = String.IsNullOrEmpty(info.Name) ? "<i>default</i>" : info.Name;
-						build.Append("<tr><td>").Append(name).Append("</td><td>").Append(info.Type.ToString())
-							.Append("</td><td>").Append(info.Length).AppendLine("</td><td>");
+						// Create name cell
+						build.Append("<tr><td>").Append(name).Append("</td><td>")
+							// Create type cell
+							.Append(info.Type.ToString("G")).Append(" (").Append(info.Type.ToString("D")).Append(")</td><td>")
+							// Create length cell
+							.Append(info.Length).AppendLine("</td><td>");
 						switch (info.Type)
 						{
 						case RegistryType.String:

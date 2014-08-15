@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.3
+ * Version: 0.5.4
  * Source: https://wp8webserver.codeplex.com
  *
  * Performs operations involving .REG files.
@@ -82,6 +82,7 @@ namespace WebAccess
 						switch (val.Type)
 						{
 						case RegistryType.String:
+						case RegistryType.VariableString:
 							{
 								String str;
 								if (NativeRegistry.ReadString(hive, path, val.Name, out str))
@@ -165,7 +166,7 @@ namespace WebAccess
 				else
 				{
 					// No values; put a comment saying so
-					writer.WriteLine("; This key contains no values");
+					writer.WriteLine("; This key contains no values, or values can't be read");
 				}
 			}
 			else
