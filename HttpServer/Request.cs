@@ -2,7 +2,7 @@
  * HttpServer\Request.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.4
+ * Version: 0.3.7
  * Source: https://wp8webserver.codeplex.com
  *
  * Parses an HTTP request from the listener. Does not perform any I/O.
@@ -348,9 +348,16 @@ namespace HttpServer
 						urlparams = new Dictionary<String, String>(items.Length);
 						foreach (String item in items)
 						{
-							String name = HttpUtility.UrlDecode(item.Substring(0, item.IndexOf('=')));
-							String value = HttpUtility.UrlDecode(item.Substring(item.IndexOf('=') + 1));
-							urlparams[name] = value;
+                            if (item.Contains('='))
+                            {
+                                String name = HttpUtility.UrlDecode(item.Substring(0, item.IndexOf('=')));
+                                String value = HttpUtility.UrlDecode(item.Substring(item.IndexOf('=') + 1));
+                                urlparams[name] = value;
+                            }
+                            else
+                            {
+                                urlparams[item] = null;
+                            }
 						}
 					}
 				}
