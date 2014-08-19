@@ -2,7 +2,7 @@
  * HttpServer\Listener.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.5
+ * Version: 0.4.0
  * Source: https://wp8webserver.codeplex.com
  *
  * Implements the listener portion of an HTTP server.
@@ -123,7 +123,8 @@ namespace HttpServer
 				{
 					// We need more data
 					data += getData(sock);
-					data = request.Continue(data);
+					// Use this instead of the Continue function, for robustness on large requests
+					request = new HttpRequest(ref data);
 				}
 				// OK *that* request is done now
 				try

@@ -29,10 +29,11 @@ namespace HttpServer
 		HttpVersion version;
 		int contentlength;
 		Dictionary<String, String> headers;
-		String body;
+		byte[] body;
+		String multipartboundry;
 
 		Dictionary<String, String> urlparams;
-		int currentLine;
+		int current;
 
 		/// <summary>
 		/// Creates a new ServerRequest from the provided String.
@@ -46,18 +47,53 @@ namespace HttpServer
 		/// <param name="request">String containing the request. Incomplete requests will be returned through this parameter.</param>
 		public HttpRequest (ref String request)
 		{
+			multipartboundry = null;
 			request = parseRequest(request, false);
 			urlparams = null;
+		}
+
+		public HttpRequest (ref byte[] request)
+		{
+			byte CR = (byte)'\r';
+			byte LF = (byte)'\n';
+
+			multipartboundry = null;
+			urlparams = null;
+			String head = null;
+			byte[] next = null;
+			int bodyIndex = 0;
+			for (current = 0; current < (request.Length - 3); current++)
+			{
+				// Find the end of the headers
+				if (CR == request[current] && CR == request[current + 2] &&
+					LF == request[current + 1] && LF == request[current + 3])
+				{
+					// End of the headers found
+					head = Encoding.UTF8.GetString(request, 0, current);
+					// Skip over the blank line
+					current += 4;
+					bodyIndex = current;
+					if (current < request.Length)
+					{
+						next = new byte[request.Length - current];
+						Array.Copy(request, current, next, 0, next.Length);
+					}
+					// Parse the headers. This will mess up current, meh
+					// Don't worry about return value; we know we found the end
+					parseRequest(head, false);
+					break;
+				}
+			}
 		}
 
 		private String parseRequest (String request, bool resume)
 		{
 			String[] lines = request.Split(new String[] { "\r\n", "\n" }, StringSplitOptions.None);
 			#region FIRSTLINE
-			if (!resume || 0 == currentLine)
+			if (!resume || 0 == current)
 			{
 				// Parse the first line
-				currentLine = 0;
+				current = 0;
 				String[] firstline = lines[0].Split(' ');
 				// Check for a well-formed line
 				if (firstline.Length < 2)
@@ -71,7 +107,7 @@ namespace HttpServer
 					{
 						// The first line contains no spaces...
 						throw new ProtocolViolationException(
-							"Invalid value for HTTP request (" + lines[currentLine] + ")");
+							"Invalid value for HTTP request (" + lines[current] + ")");
 					}
 				}
 				// Identify the method
@@ -144,7 +180,7 @@ namespace HttpServer
 					}
 				}
 			}   // if (!resume || 0 == currentLine)
-			#endregion
+			#endregion // firstline
 			// Parse the headers
 			if (lines.Length > 2)
 			{
@@ -156,12 +192,12 @@ namespace HttpServer
 			}
 			if (!resume)
 				contentlength = -1;
-			for (currentLine = (resume) ? currentLine : 1;
-				currentLine < lines.Length;
-				currentLine++)
+			for (current = (resume) ? current : 1;
+				current < lines.Length;
+				current++)
 			{
 				#region ENDREQUEST
-				if (String.IsNullOrEmpty(lines[currentLine]))
+				if (String.IsNullOrEmpty(lines[current]))
 				{
 					// Two carriage returns in a row signals the end of the headers
 					int endIndex = request.IndexOf("\r\n\r\n") + 4;
@@ -171,24 +207,53 @@ namespace HttpServer
 					{
 						// There is some body to this request
 						int bodyLen = Math.Min(contentlength, (request.Length - endIndex));
-						body = request.Substring(endIndex, bodyLen);
+						body = Encoding.UTF8.GetBytes(request.Substring(endIndex, bodyLen));
 						// Check whether we're done...
 						if (bodyLen < contentlength)
 						{
 							// Note that we need more body
-							currentLine = int.MinValue;
+							current = int.MinValue;
 						}
 						else
 						{
+							#region MULTIPART
+							// End of the headers. If multipart, parse the parts
+							if (multipartboundry != null)
+							{
+								int firstpart = body.IndexOf("--" + multipartboundry);
+								// Find the end of the line
+								firstpart = body.IndexOf('\n', firstpart) + 1;
+								if (-1 == firstpart)
+								{
+									throw new ProtocolViolationException("Incomplete multipart boundary line: " + lines[current + 1]);
+								}
+								String line = body.Substring(firstpart, (body.IndexOf('\n', firstpart) - firstpart)).Trim();
+								while (!String.IsNullOrWhiteSpace(line))
+								{
+									int partIndex = line.IndexOf(':');
+									String partHeaderName, partHeaderValue;
+									if (partIndex > 0)
+									{
+										partHeaderName = line.Substring(0, partIndex).Trim();
+										partHeaderValue = line.Substring(partIndex + 1).Trim();
+									}
+									else
+									{
+										partHeaderName = line;
+										partHeaderValue = null;
+									}
+								}
+							}
+							#endregion
 							// Note that we're done with this request, return any remnant
-							currentLine = -1;
+							current = -1;
 							request = request.Substring(endIndex + contentlength);
 						}
 					}
 					else
 					{
 						// There is no body to this request; we're done
-						currentLine = -1;
+						current = -1;
 						request = request.Substring(endIndex);
 					}
 					// Either way, we're done parsing
@@ -197,28 +262,44 @@ namespace HttpServer
 				#endregion
 				#region HEADERS
 				// OK, this should be a header
-				int valueIndex = lines[currentLine].IndexOf(':');
+				int valueIndex = lines[current].IndexOf(':');
 				String headerName, headerValue;
 				if (valueIndex > 0)
 				{
-					headerName = lines[currentLine].Substring(0, valueIndex).Trim();
-					headerValue = lines[currentLine].Substring(valueIndex + 1).Trim();
+					headerName = lines[current].Substring(0, valueIndex).Trim();
+					headerValue = lines[current].Substring(valueIndex + 1).Trim();
 				}
 				else
 				{
-					headerName = lines[currentLine];
+					headerName = lines[current];
 					headerValue = null;
 				}
 				if (headerName.Equals("Content-Length", StringComparison.InvariantCultureIgnoreCase))
 				{
-					if (!int.TryParse(headerValue, out contentlength) && (currentLine + 1) < lines.Length)
+					if (!int.TryParse(headerValue, out contentlength) && (current + 1) < lines.Length)
 					{
 						// This was supposed to be a complete line. It is broken
 						throw new ProtocolViolationException(
-							"Invalid value for HTTP header (" + lines[currentLine] + ")");
+							"Invalid value for HTTP header (" + lines[current] + ")");
 					}
 					// Move on to the next header
 					continue;
+				}
+				else if (headerName.Equals("Content-Type"))
+				{
+					// For now, just look for multipart
+					if (headerValue.StartsWith("multipart"))
+					{
+						int offset = headerValue.IndexOf("boundary=");
+						if (offset > 0)
+							multipartboundry = headerValue.Substring(offset + 9);
+						else
+						{
+							// There is supposed to be a boundary definition here...
+							throw new ProtocolViolationException(
+								"Invalid value for HTTP header (" + lines[current] + ")");
+						}
+					}
 				}
 				// Some other header that we don't yet recognize
 				headers[headerName] = headerValue;
@@ -231,7 +312,7 @@ namespace HttpServer
 		/// <summary>
 		/// Gets whether the request data was sufficient for the full request
 		/// </summary>
-		public bool Complete { get { return (-1 == currentLine); } }
+		public bool Complete { get { return (-1 == current); } }
 
 		/// <summary>
 		/// Gets the path component of the URL, without scheme, hostname, port, query string, or fragment.
@@ -290,10 +371,10 @@ namespace HttpServer
 		public HttpVersion Version { get { return version; } }
 
 		/// <summary>
-		/// Gets the body of the request as a String. May be null if the request had no body.
+		/// Gets the body of the request as a byte array. May be null if the request had no body.
 		/// The body is presented as-is and may contain encoded characters.
 		/// </summary>
-		public String Body { get { return body; } }
+		public byte[] Body { get { return body; } }
 
 		/// <summary>
 		/// Continues parsing the request from where the previous (incomplete) String ended.
@@ -302,7 +383,7 @@ namespace HttpServer
 		/// <remarks>
 		/// This function is provided as a faster way to build a complete request. It is not robust.
 		/// In particular, a partial request which ends in the middle of a header name will leave an invalid header.
-		/// It is safer to create a new ServerRequest instead.
+		/// It is safer to create a new HttpRequest instead.
 		/// </remarks>
 		/// <param name="request">String containing the raw request. Must include the portion parsed thus far.</param>
 		/// <returns>Any remaining text which is nor part of a completely parsed request.</returns>
@@ -312,5 +393,12 @@ namespace HttpServer
 				return request;
 			return parseRequest(request, true);
 		}
+	}
+
+	public class MimePart
+	{
+		Dictionary<String, String> headers;
+		String body;
+		String multipartboundry;
 	}
 }

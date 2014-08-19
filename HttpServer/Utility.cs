@@ -45,6 +45,6 @@ namespace HttpServer
 		public static readonly String[] METHODS = { "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "CONNECT" };
 		public static readonly String[] VERSIONS = { "", "HTTP/1.0", "HTTP/1.1" };
 		public static readonly String[] CONTENT_TYPES = {
-			"text/html; charset=utf-8", "text/plain; charset=utf-8", "application/x-www-form-urlencoded"};
+			"text/html; charset=utf-8", "text/plain; charset=utf-8", "application/x-www-form-urlencoded", "multipart/form-data"};
 	}
 }
