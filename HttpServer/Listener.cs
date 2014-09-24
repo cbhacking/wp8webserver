@@ -48,6 +48,7 @@ namespace HttpServer
 			serversock.Bind(local);
 			serversock.Listen(5);
 			cancelsource = new CancellationTokenSource();
+			// Use a different thread to handle connection attempts, so this one doesn't block
 			listenthread = new Thread(listener);
 			listenthread.Start();
 		}
@@ -71,6 +72,10 @@ namespace HttpServer
 			}
 		}
 
+		/// <summary>
+		/// This function is called once, as the start function of the listen thread.
+		/// It dispatches connection acceptances into their own threads.
+		/// </summary>
 		private void listener ()
 		{
 			AutoResetEvent acceptreset = new AutoResetEvent(false);
@@ -117,12 +122,12 @@ namespace HttpServer
 			do
 			{
 				// Get initial data from the socket
-				data += getData(sock);
+				data += getString(sock);
 				request = new HttpRequest(ref data);
 				while (!request.Complete)
 				{
 					// We need more data
-					data += getData(sock);
+					data += getString(sock);
 					// Use this instead of the Continue function, for robustness on large requests
 					request = new HttpRequest(ref data);
 				}
@@ -150,7 +155,7 @@ namespace HttpServer
 		/// </summary>
 		/// <param name="sock">The socket to read from</param>
 		/// <returns>The UTF-8 encoded string read from the socket</returns>
-		private String getData (Socket sock)
+		private String getString (Socket sock)
 		{
 			AutoResetEvent wait = new AutoResetEvent(false);
 			SocketAsyncEventArgs args = new SocketAsyncEventArgs();
