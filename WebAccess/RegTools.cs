@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.4
+ * Version: 0.5.5
  * Source: https://wp8webserver.codeplex.com
  *
  * Performs operations involving .REG files.
@@ -181,7 +181,7 @@ namespace WebAccess
 				{
 					foreach (String sk in subkeys)
 					{
-						BuildRegRecurse(hive, (null != path ? path + '\\' + sk : sk), writer);
+						BuildRegRecurse(hive, (!String.IsNullOrEmpty(path) ? path + '\\' + sk : sk), writer);
 					}
 				}
 				// Else no subkeys, no need to say anything about it

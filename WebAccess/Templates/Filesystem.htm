@@ -1,24 +1,7 @@
 ﻿
     <form action="/Filesystem" method="get">
-        Path: <input type="text" name="path" value="{PATH}" size="50" onfocus="checkPath()" />
+        Path: <input type="text" name="path" placeholder="File system path, may include drive letter" size="50" />
         <input type="hidden" name="pattern" value="*" />
         <input type="submit" name="getFiles" value="List Files" />
     </form>
-    <script type="text/javascript">
-        var params = {};
-        window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi,
-            function (str, key, value) {
-                params[key] = value;
-            }
-        );
-        if (params["path"]) {
-            document.forms[0].path.value = decodeURIComponent(params["path"].replace("+", " "));
-        }
-
-        function checkPath() {
-            var pvalue = document.forms[0].path.value;
-            if ("{PATH}" == pvalue)
-                document.forms[0].path.value = "";
-        }
-    </script>
     <p><br />{CONTENT}</p>

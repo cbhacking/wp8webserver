@@ -9,7 +9,7 @@
             <option value="80000004">HKEY_PERFORMANCE_DATA</option>
             <option value="80000005">HKEY_CURRENT_CONFIG</option>
         </select>
-        <input type="text" name="path" value="{PATH}" size="80" onfocus="checkPath()" /><br />
+        <input type="text" name="path" placeholder="Path within the registry hive" size="80" onfocus="checkPath()" /><br />
         <input type="submit" name="openKey" value="View Key in browser" />
         <input type="submit" name="download" value="Download this key and subkeys as .REG" />
     </form>
@@ -29,12 +29,6 @@
         }
         if (params["path"]) {
             document.forms[0].path.value = decodeURIComponent(params["path"].replace("+", " "));
-        }
-
-        function checkPath() {
-            var pvalue = document.forms[0].path.value;
-            if ("{PATH}" == pvalue)
-                document.forms[0].path.value = "";
         }
     </script>
     <br />
