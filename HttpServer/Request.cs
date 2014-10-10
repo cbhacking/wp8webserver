@@ -2,7 +2,7 @@
 	* HttpServer\Request.cs
 	* Author: GoodDayToDie on XDA-Developers forum
 	* License: Microsoft Public License (MS-PL)
-	* Version: 0.3.7
+	* Version: 0.4.0
 	* Source: https://wp8webserver.codeplex.com
 	*
 	* Parses an HTTP request from the listener. Does not perform any I/O.
@@ -39,7 +39,9 @@ namespace HttpServer
 		byte[] body;
 		String bodytext;
 
-		int current;
+		// Parser markers
+		long current;
+		int bodyIndex;
 
 		/// <summary>
 		/// Creates a new ServerRequest from the provided String.
@@ -64,9 +66,12 @@ namespace HttpServer
 			multipartboundry = null;
 			urlparams = null;
 			bodytext = null;
+			bodyIndex = -1;
+
+			request = parseRequest(request, false);
+			return;
 
 			String head = null;
-			int bodyIndex = 0;
 			for (current = 0; current < (request.Length - 3); current++)
 			{
 				// Find the end of the headers
@@ -74,10 +79,10 @@ namespace HttpServer
 					Utility.LF == request[current + 1] && Utility.LF == request[current + 3])
 				{
 					// End of the headers found
-					head = Encoding.UTF8.GetString(request, 0, current);
+					head = Encoding.UTF8.GetString(request, 0, (int)current);
 					// Skip over the blank line
 					current += 4;
-					bodyIndex = current;
+					bodyIndex = (int)current;
 					// Parse the headers. This will mess up current, meh
 					// Don't worry about return value; we know we found the end
 					parseRequest(head, false);
@@ -218,14 +223,20 @@ namespace HttpServer
 			}
 		}
 
-		private void parseHeaders (String[] lines)
+		private void parseHeaders (String[] lines, int skip = 0)
 		{
 			if (null == headers)
 			{
-				headers = new Dictionary<String, String>(lines.Length);
+				headers = new Dictionary<String, String>(lines.Length - skip);
 			}
 			foreach (String line in lines)
 			{
+				// Skip any lines we aren't supposed to process
+				if (skip > 0)
+				{
+					skip--;
+					continue;
+				}
 				// First, check for a name/value delineator
 				int valueIndex = line.IndexOf(':');
 				String headerName, headerValue;
@@ -278,7 +289,74 @@ namespace HttpServer
 
 		private byte[] parseRequest (byte[] request, bool resume)
 		{
-			return null;
+			for (current = 0; current < (request.Length - 3); current++)
+			{
+				// Find the end of the headers
+				if (Utility.CR == request[current] && Utility.CR == request[current + 2] &&
+					Utility.LF == request[current + 1] && Utility.LF == request[current + 3])
+				{
+					// End of the headers found
+					String head = Encoding.UTF8.GetString(request, 0, (int)current);
+					String[] lines = head.Split(new String[] { "\r\n" }, StringSplitOptions.None);
+					// Parse the first line
+					parseFirstLine(lines[0]);
+					// Parse the headers. This version doesn't mess up current
+					parseHeaders(lines, 1);
+					// End of headers reached, skip over the blank line
+					current += 4;
+					bodyIndex = (int)current;
+					current = bodyIndex;
+					// Check whether the request is done
+					if ((contentlength > 0) && ((request.Length - bodyIndex) >= contentlength))
+					{
+						// We have the entire body already
+						body = new byte[contentlength];
+						Array.Copy(request, bodyIndex, body, 0, contentlength);
+						if (headers.ContainsKey("Content-Type"))
+						{
+							String ct = headers["Content-Type"];
+							int csi = ct.IndexOf("charset");
+							if (-1 != csi)
+							{
+								// There is a character set for the body
+								String cs = ct.Substring(ct.IndexOf('=', csi) + 1).Trim();
+								if (cs.Contains(';'))
+								{
+									cs = cs.Substring(0, cs.IndexOf(';')).Trim();
+								}
+								Encoding enc = Encoding.GetEncoding(cs);
+								bodytext = enc.GetString(body, 0, contentlength);
+							}
+							else if (ct.Contains("text"))
+							{
+								// Text without specified charset. Oookay then
+								bodytext = new System.IO.StreamReader(new System.IO.MemoryStream(body)).ReadToEnd();
+							}
+							else if (multipartboundry != null)
+							{
+								// Figure out how many parts there are
+								List<int> partIndices = new List<int>();
+								int idx = MimePart.findBoundary(body, multipartboundry);
+								while (idx > 0)
+								{
+									partIndices.Add(idx);
+								}
+							}
+						}
+						// Since we have the whole body...
+						current = -1;
+						int totallen = (contentlength > 0) ? bodyIndex + contentlength : bodyIndex;
+						if (request.Length > totallen)
+						{
+							// There may be another request past this one
+							byte[] remainder = new byte[request.Length - totallen];
+							Array.Copy(request, totallen, remainder, 0, remainder.Length);
+							request = remainder;
+						}
+					}
+					break;
+				}
+			}
 		}
 
 		private String parseRequest (String request, bool resume)
@@ -513,6 +591,13 @@ namespace HttpServer
 		/// <param name="request">String containing the raw request. Must include the portion parsed thus far.</param>
 		/// <returns>Any remaining text which is nor part of a completely parsed request.</returns>
 		public String Continue (String request)
+		{
+			if (this.Complete)
+				return request;
+			return parseRequest(request, true);
+		}
+
+		public byte[] Continue (byte[] request)
 		{
 			if (this.Complete)
 				return request;

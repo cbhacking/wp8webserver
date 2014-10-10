@@ -164,12 +164,45 @@ namespace HttpServer
 			args.Completed += (Object sender, SocketAsyncEventArgs args2) => { args = args2; wait.Set(); };
 			if (sock.ReceiveAsync(args))
 			{
+				// Receive function is executing in the background; sychronize it
 				wait.WaitOne();
 			}
 			// At this point, we should have data
 			if (SocketError.Success == args.SocketError)
 			{
 				return Encoding.UTF8.GetString(args.Buffer, 0, args.BytesTransferred);
+			}
+			else
+			{
+				throw new SocketException();
+			}
+		}
+
+		private byte[] getBytes (Socket sock, int maxLen = (1 << 20))
+		{
+			AutoResetEvent wait = new AutoResetEvent(false);
+			byte[] buffer = new byte[maxLen];
+			SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+			args.SetBuffer(buffer, 0, maxLen);
+			args.Completed += (Object s, SocketAsyncEventArgs a2) => { args = a2; wait.Set(); };
+			if (sock.ReceiveAsync(args))
+			{
+				// It's running in the background; block until done
+				wait.WaitOne();
+			}
+			// We get signal?
+			if (SocketError.Success == args.SocketError)
+			{
+				int reclen = args.BytesTransferred;
+				if (reclen < maxLen)
+				{
+					// Shrink the returned buffer
+					byte[] newbuf = new byte[reclen];
+					Array.Copy(buffer, newbuf, reclen);
+					return newbuf;
+				}
+				// We filled the buffer
+				return buffer;
 			}
 			else
 			{
