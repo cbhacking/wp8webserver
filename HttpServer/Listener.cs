@@ -2,7 +2,7 @@
  * HttpServer\Listener.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.0
+ * Version: 0.4.1
  * Source: https://wp8webserver.codeplex.com
  *
  * Implements the listener portion of an HTTP server.
@@ -22,7 +22,7 @@ namespace HttpServer
 	/// <summary>
 	/// Implements the listener half of a basic UTF-8 HTTP server.
 	/// </summary>
-	public class WebServer
+	public class WebServer : IDisposable
 	{
 		Socket serversock;
 		Thread listenthread;
@@ -55,7 +55,19 @@ namespace HttpServer
 
 		~WebServer ()
 		{
+			Dispose(false);
+		}
+
+		protected virtual void Dispose (bool disposing)
+		{
 			Close();
+			cancelsource.Dispose();
+		}
+
+		public void Dispose ()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
 		}
 
 		public void Close ()
@@ -118,43 +130,91 @@ namespace HttpServer
 			Socket sock = (Socket)o;
 			sock.ReceiveBufferSize = (1 << 20); // Use a 1MB buffer
 			String data = "";
-			HttpRequest request;
 			do
 			{
-				// Get initial data from the socket
-				data += getString(sock);
-				request = new HttpRequest(ref data);
-				while (!request.Complete)
-				{
-					// We need more data
-					data += getString(sock);
-					// Use this instead of the Continue function, for robustness on large requests
-					request = new HttpRequest(ref data);
-				}
-				// OK *that* request is done now
+				// Get one request at a time
+				HttpRequest request = new HttpRequest();
 				try
 				{
+					do
+					{
+						// We need (more) data
+						String newdata = getString(sock);
+						if (null == newdata)
+						{
+							// The connection was closed gracefully
+							return;
+						}
+						data += newdata;
+						// Update/populate the request using the Continue function
+						data = request.Continue(data);
+						// Sanity-check what we've parsed so far
+						if (HttpVersion.INVALID_VERSION == request.Version)
+						{
+							HttpResponse resp = new HttpResponse(
+								sock,
+								HttpStatusCode.HttpVersionNotSupported,
+								Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
+								"The protocol version specified in the request is not recognized!\n");
+							// Send the error report, then close the connection; we don't care what else the client wanted
+							resp.Send();
+							sock.Close(100);
+							return;
+						}
+						if (HttpMethod.INVALID_METHOD == request.Method)
+						{
+							HttpResponse resp = new HttpResponse(
+								sock,
+								HttpStatusCode.NotImplemented,
+								Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
+								"The request HTTP verb (method) is not recognized!\n",
+								request.Version);
+							// Send the error report, then close the connection; we don't care what else the client wanted
+							resp.Send();
+							sock.Close(100);
+							return;
+						}
+					} while (!request.Complete);
+					// OK *that* request is done now.
 					servicer(request, sock);
+				}
+				catch (ProtocolViolationException ex)
+				{
+					if (sock.Connected)
+					{
+						HttpResponse resp = new HttpResponse(
+							sock,
+							HttpStatusCode.BadRequest,
+							Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
+							"Bad request!\n" + ex.ToString());
+						resp.Send();
+						sock.Close(100);
+					}
+					return;
 				}
 				catch (Exception ex)
 				{
-					HttpResponse resp = new HttpResponse(
-						sock,
-						HttpStatusCode.InternalServerError,
-						Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
-						"Internal Server Error!\n" + ex.ToString(),
-						request.Version);
-					resp.Send();
+					if (sock.Connected)
+					{
+						HttpResponse resp = new HttpResponse(
+							sock,
+							HttpStatusCode.InternalServerError,
+							Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
+							"Internal Server Error!\n" + ex.ToString());
+						resp.Send();
+						sock.Close(100);
+					}
+					return;
 				}
 				// But, there might have been more than one request in the last packet
-			} while (!String.IsNullOrEmpty(data));
+			} while (sock.Connected);
 		}
 
 		/// <summary>
 		/// Retrieves waiting data on the socket. Will block if no data is available
 		/// </summary>
 		/// <param name="sock">The socket to read from</param>
-		/// <returns>The UTF-8 encoded string read from the socket</returns>
+		/// <returns>The UTF-8 encoded string read from the socket, or NULL if connection closed</returns>
 		private String getString (Socket sock)
 		{
 			AutoResetEvent wait = new AutoResetEvent(false);
@@ -170,7 +230,16 @@ namespace HttpServer
 			// At this point, we should have data
 			if (SocketError.Success == args.SocketError)
 			{
-				return Encoding.UTF8.GetString(args.Buffer, 0, args.BytesTransferred);
+				// Apparently this can happen when the connection closed gracefully
+				if (args.BytesTransferred > 0)
+				{
+					return Encoding.UTF8.GetString(args.Buffer, 0, args.BytesTransferred);
+				}
+				else
+				{
+					// This connection is closed; no more data will flow
+					return null;
+				}
 			}
 			else
 			{
@@ -194,15 +263,24 @@ namespace HttpServer
 			if (SocketError.Success == args.SocketError)
 			{
 				int reclen = args.BytesTransferred;
-				if (reclen < maxLen)
+				if (reclen > 0)
 				{
-					// Shrink the returned buffer
-					byte[] newbuf = new byte[reclen];
-					Array.Copy(buffer, newbuf, reclen);
-					return newbuf;
+					// We got *some* data
+					if (reclen < maxLen)
+					{
+						// Shrink the returned buffer
+						byte[] newbuf = new byte[reclen];
+						Array.Copy(buffer, newbuf, reclen);
+						return newbuf;
+					}
+					// We filled the buffer
+					return buffer;
 				}
-				// We filled the buffer
-				return buffer;
+				else
+				{
+					// Connection closed gracefully
+					return null;
+				}
 			}
 			else
 			{
