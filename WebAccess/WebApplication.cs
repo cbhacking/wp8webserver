@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.4
+ * Version: 0.5.6
  * Source: https://wp8webserver.codeplex.com
  *
  * Handles GET requests from the web server.
@@ -375,187 +375,24 @@ namespace WebAccess
 							.Append(info.Type.ToString("G")).Append(" (").Append(info.Type.ToString("D")).Append(")</td><td>")
 							// Create length cell
 							.Append(info.Length).AppendLine("</td><td>");
-						switch (info.Type)
+						if (0 == info.Length)
+						{	// No data!
+							build.Append("<i>NULL</i>");
+						}
+						else
 						{
-						case RegistryType.String:
-						case RegistryType.VariableString:
-							{	// Make sure it's really a string; display binary otherwise
-								if (0 != (info.Length % 2))
-								{
-									byte[] binary;
-									if (NativeRegistry.ReadBinary(hk, path, info.Name, out binary))
+							switch (info.Type)
+							{
+							case RegistryType.String:
+							case RegistryType.VariableString:
+								{	// Make sure it's really a string; display binary otherwise
+									if (0 != (info.Length % 2))
 									{
-										if (null != binary)
+										byte[] binary;
+										RegistryType t;
+										if (NativeRegistry.QueryValue(hk, path, info.Name, out t, out binary))
 										{
 											buildHexTable(build, binary);
-										}
-										else
-										{	// No data!
-											build.Append("<i>NULL</i>");
-										}
-									}
-									else
-									{	// Error reading data
-										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
-									}
-									break;
-								}
-								// Handle REG_SZ and REG_EXPAND_SZ
-								String data;
-								if (NativeRegistry.ReadString(hk, path, info.Name, out data) && !String.IsNullOrEmpty(data))
-								{
-									build.Append(WebUtility.HtmlEncode(data));
-								}
-								break;
-							}
-						case RegistryType.Integer:
-							{	// Make sure it's really a DWORD; display binary otherwise
-								if (info.Length != 4)
-								{
-									byte[] binary;
-									if (NativeRegistry.ReadBinary(hk, path, info.Name, out binary))
-									{
-										if (null != binary)
-										{
-											buildHexTable(build, binary);
-										}
-										else
-										{	// No data!
-											build.Append("<i>NULL</i>");
-										}
-									}
-									else
-									{	// Error reading data
-										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
-									}
-									break;
-								}
-								// Handle REG_DWORD
-								uint data;
-								if (NativeRegistry.ReadDWORD(hk, path, info.Name, out data))
-								{
-									build.Append(data).AppendFormat(" (0x{0:X8})", data);
-								}
-								break;
-							}
-						case RegistryType.Long:
-							{	// Make sure it's really a QWORD; display binary otherwise
-								if (info.Length != 8)
-								{
-									byte[] binary;
-									if (NativeRegistry.ReadBinary(hk, path, info.Name, out binary))
-									{
-										if (null != binary)
-										{
-											buildHexTable(build, binary);
-										}
-										else
-										{	// No data!
-											build.Append("<i>NULL</i>");
-										}
-									}
-									else
-									{	// Error reading data
-										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
-									}
-									break;
-								}
-								// Handle REG_QWORD
-								ulong data;
-								if (NativeRegistry.ReadQWORD(hk, path, info.Name, out data))
-								{
-									try
-									{
-										DateTime date = DateTime.FromFileTime((long)data);
-										build.Append(data).AppendFormat(" (0x{0:X16}) (", data).Append(date.ToString()).Append(')');
-									}
-									catch (ArgumentOutOfRangeException)
-									{
-										// It's not a date...
-										build.Append(data).AppendFormat(" (0x{0:X16})", data);
-									}
-								}
-								break;
-							}
-						case RegistryType.MultiString:
-							{	// Make sure it's really a string; display binary otherwise
-								if (0 != (info.Length % 2))
-								{
-									byte[] binary;
-									if (NativeRegistry.ReadBinary(hk, path, info.Name, out binary))
-									{
-										if (null != binary)
-										{
-											buildHexTable(build, binary);
-										}
-										else
-										{	// No data!
-											build.Append("<i>NULL</i>");
-										}
-									}
-									else
-									{	// Error reading data
-										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
-									}
-									break;
-								}
-								// Handle REG_MULTI_SZ
-								String[] data;
-								if (NativeRegistry.ReadMultiString(hk, path, info.Name, out data)
-									&& (data != null) && (data.Length > 0))
-								{
-									build.Append(WebUtility.HtmlEncode(data[0]));
-									for (int i = 1; i < data.Length; i++)
-									{
-										build.AppendLine("<br />").Append(WebUtility.HtmlEncode(data[i]));
-									}
-								}
-								break;
-							}
-						case RegistryType.Binary:
-							{	// Handle REG_BINARY
-								switch (info.Length)
-								{
-								case 4:
-									{	// Treat it as a DWORD
-										uint data;
-										if (NativeRegistry.ReadDWORD(hk, path, info.Name, out data))
-										{
-											build.Append(data).AppendFormat(" (0x{0:X8})", data);
-										}
-										break;
-									}
-								case 8:
-									{	// Treat it as a QWORD
-										ulong data;
-										if (NativeRegistry.ReadQWORD(hk, path, info.Name, out data))
-										{
-											try
-											{
-												DateTime date = DateTime.FromFileTime((long)data);
-												build.Append(data).AppendFormat(" (0x{0:X16}) (", data).Append(date.ToString()).Append(')');
-											}
-											catch (ArgumentOutOfRangeException)
-											{
-												// It's not a date...
-												build.Append(data).AppendFormat(" (0x{0:X16})", data);
-											}
-										}
-										break;
-									}
-								default:
-									{	// Display as a binary hex sequence
-										byte[] data;
-										if (NativeRegistry.ReadBinary(hk, path, info.Name, out data))
-										{
-											if (null != data)
-											{
-												buildHexTable(build, data);
-											}
-											else
-											{	// No data!
-												build.Append("<i>NULL</i>");
-											}
 										}
 										else
 										{	// Error reading data
@@ -563,32 +400,236 @@ namespace WebAccess
 										}
 										break;
 									}
-								} // End of info.length switch
-								break;
-							}
-						default:
-							{	// Handle arbitrary value types
-								byte[] data;
-								RegistryType type;
-								if (NativeRegistry.QueryValue(hk, path, info.Name, out type, out data))
-								{
-									if (null != data)
+									// Handle REG_SZ and REG_EXPAND_SZ
+									String data;
+									if (NativeRegistry.ReadString(hk, path, info.Name, out data))
+									{
+										if (String.IsNullOrEmpty(data))
+										{
+											build.Append("<i>EMPTY STRING</i>");
+										}
+										else
+										{
+											build.Append(WebUtility.HtmlEncode(data));
+										}
+									}
+									else
+									{	// Error reading data
+										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+									}
+									break;
+								}
+							case RegistryType.Integer:
+								{	// Make sure it's really a DWORD; display binary otherwise
+									if (info.Length != 4)
+									{
+										byte[] binary;
+										RegistryType t;
+										if (NativeRegistry.QueryValue(hk, path, info.Name, out t, out binary))
+										{
+											buildHexTable(build, binary);
+										}
+										else
+										{	// Error reading data
+											build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+										}
+										break;
+									}
+									// Handle REG_DWORD
+									uint data;
+									if (NativeRegistry.ReadDWORD(hk, path, info.Name, out data))
+									{
+										build.Append(data).AppendFormat(" (0x{0:X8})", data);
+									}
+									else
+									{	// Error reading data
+										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+									}
+									break;
+								}
+							case RegistryType.Long:
+								{	// Make sure it's really a QWORD; display binary otherwise
+									if (info.Length != 8)
+									{
+										byte[] binary;
+										RegistryType t;
+										if (NativeRegistry.QueryValue(hk, path, info.Name, out t, out binary))
+										{
+											buildHexTable(build, binary);
+										}
+										else
+										{	// Error reading data
+											build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+										}
+										break;
+									}
+									// Handle REG_QWORD
+									ulong data;
+									if (NativeRegistry.ReadQWORD(hk, path, info.Name, out data))
+									{
+										try
+										{
+											DateTime date = DateTime.FromFileTime((long)data);
+											build.Append(data).AppendFormat(" (0x{0:X16}) (", data).Append(date.ToString()).Append(')');
+										}
+										catch (ArgumentOutOfRangeException)
+										{
+											// It's not a date...
+											build.Append(data).AppendFormat(" (0x{0:X16})", data);
+										}
+									}
+									else
+									{	// Error reading data
+										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+									}
+									break;
+								}
+							case RegistryType.MultiString:
+								{	// Make sure it's really a string; display binary otherwise
+									if (0 != (info.Length % 2))
+									{	// Odd number of bytes
+										byte[] binary;
+										RegistryType t;
+										if (NativeRegistry.QueryValue(hk, path, info.Name, out t, out binary))
+										{
+											buildHexTable(build, binary);
+										}
+										else
+										{	// Error reading data
+											build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+										}
+										break;
+									}
+									// Handle REG_MULTI_SZ
+									String[] data;
+									if (NativeRegistry.ReadMultiString(hk, path, info.Name, out data))
+									{
+										if ((null == data) || (0 == data.Length))
+										{
+											build.Append("<i>NO STRINGS</i>");
+										}
+										else
+										{
+											if (String.IsNullOrEmpty(data[0]))
+											{
+												build.Append("<i>EMPTY STRING</i>");
+											}
+											else
+											{
+												build.Append(WebUtility.HtmlEncode(data[0]));
+											}
+											for (int i = 1; i < data.Length; i++)
+											{
+												if (String.IsNullOrEmpty(data[i]))
+												{
+													build.Append("<br />\n<i>EMPTY STRING</i>");
+												}
+												else
+												{
+													build.Append("<br />\n").Append(WebUtility.HtmlEncode(data[i]));
+												}
+											}
+										}
+									}
+									else
+									{	// Error reading data
+										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+									}
+									break;
+								}
+							case RegistryType.None:
+							case RegistryType.Binary:
+								{	// Handle REG_BINARY
+									switch (info.Length)
+									{
+										// Zero is taken care of above
+									case 4:
+										{	// Treat it as a DWORD
+											uint data;
+											if (NativeRegistry.ReadDWORD(hk, path, info.Name, out data))
+											{
+												build.Append(data).AppendFormat(" (0x{0:X8})", data);
+											}
+											else
+											{
+												byte[] binary;
+												RegistryType t;
+												if (NativeRegistry.QueryValue(hk, path, info.Name, out t, out binary))
+												{
+													buildHexTable(build, binary);
+												}
+												else
+												{	// Error reading data
+													build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+												}
+											}
+											break;
+										}
+									case 8:
+										{	// Treat it as a QWORD
+											ulong data;
+											if (NativeRegistry.ReadQWORD(hk, path, info.Name, out data))
+											{
+												try
+												{
+													DateTime date = DateTime.FromFileTime((long)data);
+													build.Append(data).AppendFormat(" (0x{0:X16}) (", data).Append(date.ToString()).Append(')');
+												}
+												catch (ArgumentOutOfRangeException)
+												{
+													// It's not a date...
+													build.Append(data).AppendFormat(" (0x{0:X16})", data);
+												}
+											}
+											else
+											{
+												byte[] binary;
+												RegistryType t;
+												if (NativeRegistry.QueryValue(hk, path, info.Name, out t, out binary))
+												{
+													buildHexTable(build, binary);
+												}
+												else
+												{	// Error reading data
+													build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+												}
+											}
+											break;
+										}
+									default:
+										{	// Display as a binary hex sequence
+											byte[] data;
+											RegistryType type;
+											if (NativeRegistry.QueryValue(hk, path, info.Name, out type, out data))
+											{
+												buildHexTable(build, data);
+											}
+											else
+											{	// Error reading data
+												build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
+											}
+											break;
+										}
+									} // End of info.length switch
+									break;
+								}
+							default:
+								{	// Handle arbitrary value types
+									byte[] data;
+									RegistryType type;
+									if (NativeRegistry.QueryValue(hk, path, info.Name, out type, out data))
 									{
 										buildHexTable(build, data);
 									}
 									else
-									{	// No data!
-										build.Append("<i>NULL</i>");
+									{	// Error reading data
+										build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
 									}
+									break;
 								}
-								else
-								{	// Error reading data
-									build.AppendFormat("<i>Error reading data: {0} ({0:X})</i>", NativeRegistry.GetError());
-								}
-								break;
-							}
-						}	// End of info.type switch
-						build.AppendLine("</td></tr>");
+							}	// End of info.type switch
+							build.AppendLine("</td></tr>");
+						}
 					}
 					build.AppendLine("</table>");
 				}
@@ -609,7 +650,13 @@ namespace WebAccess
 		}
 		
 		private static void buildHexTable (StringBuilder build, byte[] data)
-		{	// Use a table layout
+		{
+			if (null == data)
+			{	// No data!
+				build.Append("<i>NULL</i>");
+				return;
+			}
+			// Use a table layout
 			int linestart = 0;
 			build.Append("<pre>");
 			for (int i = 0; i < data.Length; i++)

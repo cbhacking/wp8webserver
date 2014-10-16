@@ -4,4 +4,15 @@
         <input type="hidden" name="pattern" value="*" />
         <input type="submit" name="getFiles" value="List Files" />
     </form>
+    <script type="text/javascript">
+        var params = {};
+        window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi,
+            function (str, key, value) {
+                params[key] = value;
+            }
+        );
+        if (params["path"]) {
+            document.forms[0].path.value = decodeURIComponent(params["path"].replace("+", " "));
+        }
+    </script>
     <p><br />{CONTENT}</p>
