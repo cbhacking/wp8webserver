@@ -65,8 +65,9 @@ namespace WebAccess
 					body = readFile("Templates/Error.htm");
 					body.Replace("{ERROR}", (int)code + " " + code.ToString())
 						.Replace("{CONTENT}",
-							"Unable to find the page \"" + req.Path +
-							"\"<p>Exception info:<br />" + ex.ToString() + "</p>");
+							"Error while processing the file system request \"" + req.Path +
+							"\"<p>Exception info:<br />" + ex.ToString() + "<br />" + 
+							ex.StackTrace + "</p>");
 					content = body.ToString();
 				}
 			}
@@ -90,7 +91,7 @@ namespace WebAccess
 					body = readFile("Templates/Error.htm");
 					body.Replace("{ERROR}", (int)code + " " + code.ToString())
 						.Replace("{CONTENT}",
-							"Unable to find the page \"" + req.Path +
+							"Error while processing the registry request \"" + req.Path +
 							"\"<p>Exception info:<br />" + ex.ToString() + "</p>");
 					content = body.ToString();
 				}
