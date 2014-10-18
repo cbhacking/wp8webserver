@@ -113,11 +113,18 @@ namespace HttpServer
 			}
 		}
 
+		/// <summary>
+		/// This function is called every time the server accepts a client connection.
+		/// It runs in the thread created by AcceptAsync
+		/// </summary>
+		/// <param name="args"></param>
 		private void accepter (SocketAsyncEventArgs args)
 		{
             if (args.SocketError == SocketError.Success)
             {
-				new Thread(handler).Start(args.AcceptSocket);
+				// This is already in its own thread; just call the handler directly
+				//new Thread(handler).Start(args.AcceptSocket);
+				handler(args.AcceptSocket);
 			}
 		}
 
@@ -128,6 +135,15 @@ namespace HttpServer
 		private void handler (Object o)
 		{
 			Socket sock = (Socket)o;
+			handler(sock);
+		}
+
+		/// <summary>
+		/// Called after the client connection is established. Receives client request.
+		/// </summary>
+		/// <param name="sock">Connected TCP socket communicating with client</param>
+		private void handler (Socket sock)
+		{
 			sock.ReceiveBufferSize = (1 << 20); // Use a 1MB buffer
 			String data = "";
 			do
@@ -200,7 +216,7 @@ namespace HttpServer
 							sock,
 							HttpStatusCode.InternalServerError,
 							Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
-							"Internal Server Error!\n" + ex.ToString());
+							"Internal Server Error!\n" + ex.ToString() + '\n' + ex.StackTrace);
 						resp.Send();
 						sock.Close(100);
 					}
