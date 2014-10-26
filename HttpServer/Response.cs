@@ -2,7 +2,7 @@
  * HttpServer\Response.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.3.6
+ * Version: 0.4.2
  * Source: https://wp8webserver.codeplex.com
  *
  * Template to construct an HTTP response.
@@ -70,27 +70,32 @@ namespace HttpServer
 
 		private byte[] buildResponse ()
 		{
-			// Build the headers
 			StringBuilder build = new StringBuilder();
+			// Build the first line
 			build.Append(Utility.VERSIONS[(int)version]).Append(' ');
 			build.Append((int)status).Append(' ').AppendLine(status.ToString());
+			// Add/update the standard headers
 			if (null != contenttype)
-				build.Append("Content-Type: ").AppendLine(contenttype);
+			{
+				headers["Content-Type"] = contenttype;
+			}
+			if (null != content)
+			{
+				headers["Content-Length"] = content.Length.ToString();
+			}
+			headers["Date"] = DateTime.UtcNow.ToString("R");
+			// Put all headers in the response string, including custom ones
 			foreach (String header in headers.Keys)
 			{
 				build.Append(header).Append(": ").AppendLine(headers[header]);
-			}
-			build.Append("Date: ").AppendLine(DateTime.UtcNow.ToString("R"));
-			if (null != content)
-			{
-				build.Append("Content-Length: ").AppendLine(content.Length.ToString());
 			}
 			build.AppendLine(); // Empty line to terminate the headers
 			String head = build.ToString();
 			// Build the array
 			if (null != content)
 			{
-				int headlen = Encoding.UTF8.GetByteCount(head);
+				byte[] headbytes = Encoding.UTF8.GetBytes(head);
+				int headlen = headbytes.Length;
 				byte[] ret = new byte[headlen + content.Length];
 				Array.Copy(Encoding.UTF8.GetBytes(head), ret, headlen);
 				Array.Copy(content, 0, ret, headlen, content.Length);
