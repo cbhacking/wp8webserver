@@ -108,7 +108,7 @@ namespace HttpServer
 			method = HttpMethod.INVALID_METHOD;
 			for (int i = 0; i < Utility.METHODS.Length; i++)
 			{
-				if (Utility.METHODS[i].Equals(firstline[0], StringComparison.InvariantCultureIgnoreCase))
+				if (Utility.METHODS[i].Equals(firstline[0], StringComparison.OrdinalIgnoreCase))
 				{
 					method = (HttpMethod)i;
 					break;
@@ -167,7 +167,7 @@ namespace HttpServer
 				version = HttpVersion.INVALID_VERSION;
 				for (int i = 0; i < Utility.VERSIONS.Length; i++)
 				{
-					if (Utility.VERSIONS[i].Equals(firstline[2], StringComparison.InvariantCultureIgnoreCase))
+					if (Utility.VERSIONS[i].Equals(firstline[2], StringComparison.OrdinalIgnoreCase))
 					{
 						version = (HttpVersion)i;
 						break;
@@ -206,7 +206,7 @@ namespace HttpServer
 					headerValue = null;
 				}
 				// Check for particularly important headers
-				if (headerName.Equals("Content-Length", StringComparison.InvariantCultureIgnoreCase))
+				if (headerName.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
 				{
 					if ((null == headerValue) || !long.TryParse(headerValue, out contentlength))
 					{
@@ -446,7 +446,7 @@ namespace HttpServer
 					headerName = lines[currentLine];
 					headerValue = null;
 				}
-				if (headerName.Equals("Content-Length", StringComparison.InvariantCultureIgnoreCase))
+				if (headerName.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
 				{
 					if (!long.TryParse(headerValue, out contentlength) && (currentLine + 1) < lines.Length)
 					{

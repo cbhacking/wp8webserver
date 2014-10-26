@@ -43,7 +43,7 @@ namespace WebAccess
 			HttpStatusCode code = HttpStatusCode.OK;
 			HttpResponse resp;
 
-			if (req.Path.Equals("/Filesystem", StringComparison.InvariantCultureIgnoreCase))
+			if (req.Path.Equals("/Filesystem", StringComparison.OrdinalIgnoreCase))
 			{
 				// The Retrieve the requested file system resource and display it in the template
 				try
@@ -71,7 +71,7 @@ namespace WebAccess
 					content = body.ToString();
 				}
 			}
-			else if (req.Path.StartsWith("/Registry", StringComparison.InvariantCultureIgnoreCase))
+			else if (req.Path.StartsWith("/Registry", StringComparison.OrdinalIgnoreCase))
 			{
 				try
 				{
