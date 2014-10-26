@@ -2,7 +2,7 @@
 	* HttpServer\Request.cs
 	* Author: GoodDayToDie on XDA-Developers forum
 	* License: Microsoft Public License (MS-PL)
-	* Version: 0.4.1
+	* Version: 0.4.2
 	* Source: https://wp8webserver.codeplex.com
 	*
 	* Parses an HTTP request from the listener. Does not perform any I/O.
@@ -36,6 +36,7 @@ namespace HttpServer
 
 		// Header fields
 		long contentlength;
+		ConnectionPersistence persist;
 		Dictionary<String, String> headers;
 		String multipartboundry;
 
@@ -61,6 +62,7 @@ namespace HttpServer
 			version = HttpVersion.INVALID_VERSION;
 			urlparams = null;
 			contentlength = -1L;
+			persist = ConnectionPersistence.UNSPECIFIED;
 			headers = null;
 			multipartboundry = null;
 			body = null;
@@ -457,7 +459,7 @@ namespace HttpServer
 					// Move on to the next header
 					continue;
 				}
-				else if (headerName.Equals("Content-Type"))
+				else if (headerName.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
 				{
 					// For now, just look for multipart
 					if (headerValue.StartsWith("multipart"))
@@ -473,7 +475,18 @@ namespace HttpServer
 						}
 					}
 				}
-				// Some other header that we don't yet recognize
+				else if (headerName.Equals("Connection", StringComparison.OrdinalIgnoreCase))
+				{
+					for (int i = 0; i < Utility.PERSISTENCE.Length; i++)
+					{
+						if (headerValue.Equals(Utility.PERSISTENCE[i], StringComparison.OrdinalIgnoreCase))
+						{
+							persist = (ConnectionPersistence)i;
+							break;
+						}
+					}
+				}
+				// May be some other header that we don't yet recognize
 				headers[headerName] = headerValue;
 				#endregion
 			}
@@ -513,6 +526,11 @@ namespace HttpServer
 				return headers;
 			}
 		}
+
+		/// <summary>
+		/// Gets the result of parsing the Connection header, if present. May be "Unspecified"
+		/// </summary>
+		public ConnectionPersistence Connection { get { return persist; } }
 
 		/// <summary>
 		/// Gets the query string parameters as a dictionary of name/value pairs.
@@ -568,6 +586,20 @@ namespace HttpServer
 		/// The body is presented as-is and may contain encoded characters.
 		/// </summary>
 		public byte[] Body { get { return body; } }
+
+		public bool ConnectionShouldPersist ()
+		{
+			switch (persist)
+			{
+			case ConnectionPersistence.CLOSE:
+				return false;
+			case ConnectionPersistence.KEEP_ALIVE:
+				return true;
+			default:
+				// Figure it out from the version
+				return HttpVersion.ONE_POINT_ONE == version;
+			}
+		}
 
 		/// <summary>
 		/// Continues parsing the request from where the previous (incomplete) String ended.
