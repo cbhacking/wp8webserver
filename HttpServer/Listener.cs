@@ -2,7 +2,7 @@
  * HttpServer\Listener.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.1
+ * Version: 0.4.2
  * Source: https://wp8webserver.codeplex.com
  *
  * Implements the listener portion of an HTTP server.
@@ -236,8 +236,11 @@ namespace HttpServer
 			args.Completed += (Object sender, SocketAsyncEventArgs args2) => { args = args2; wait.Set(); };
 			if (sock.ReceiveAsync(args))
 			{
-				// Receive function is executing in the background; sychronize it
-				wait.WaitOne();
+				// Receive function is executing in the background; sychronize it (time out in 2 minutes)
+				if (!wait.WaitOne(120000))
+				{	// Timed out; stop listening for more data
+					return null;
+				}
 			}
 			// At this point, we should have data
 			if (SocketError.Success == args.SocketError)
@@ -269,7 +272,10 @@ namespace HttpServer
 			if (sock.ReceiveAsync(args))
 			{
 				// It's running in the background; block until done
-				wait.WaitOne();
+				if (!wait.WaitOne(120000))
+				{	// Timed out; stop listening for more data
+					return null;
+				}
 			}
 			// We get signal?
 			if (SocketError.Success == args.SocketError)
