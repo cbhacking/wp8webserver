@@ -104,13 +104,14 @@ namespace WebAccess
 			}
 			else
 			{
-				// Retrieve the requested path (probably Content) and display it un-modified
+				// Retrieve the requested path (probably Content) and display it un-modified, then close connection
 				try
 				{
 					body = readFile(req.Path.Substring(1));
 					resp = new HttpResponse(sock, HttpStatusCode.OK,
 						Utility.CONTENT_TYPES[(int)ResponseType.TEXT_HTML], body.ToString(), req.Version);
 					resp.Send();
+					return;
 				}
 				catch (FileNotFoundException ex)
 				{
@@ -123,8 +124,8 @@ namespace WebAccess
 							"\"<p>Exception info:<br />" + ex.ToString() + "</p>");
 					content = body.ToString();
 				}
-				return;
 			}
+			// OK, getting here, we should have content to display
 			body = readFile("Templates/Master.htm");
 			if (null != body)
 			{
@@ -132,8 +133,10 @@ namespace WebAccess
 				{
 					code = HttpStatusCode.BadRequest;
 					StringBuilder error = readFile("Templates/Error.htm");
-					error.Replace(" {ERROR}", "")
-						.Replace("{CONTENT}", "Unknown error while servicing the request; no data returned");
+					error.Replace("{ERROR}", (int)code + " " + code.ToString())
+						.Replace("{CONTENT}", "Unknown error while servicing the request; no data returned from the web application.<br />" +
+						"If you expected some content, or a successful no-content response, please file a bug at " +
+						"<a href=\"http://forum.xda-developers.com/devdb/project/?id=6190#bugReporter\">the project thread on XDA</a>!");
 					content = error.ToString();
 				}
 				body.Replace("{CONTENT}", content);
@@ -143,9 +146,10 @@ namespace WebAccess
 			else
 			{
 				// Can't even open the master page!
-				html = "ERROR! Unable to find .\\Templates\\Master.htm";
-				code = HttpStatusCode.Gone;
+				html = "<html><head></head><body><h1>ERROR! Unable to find .\\Templates\\Master.htm</h1></";
+				code = HttpStatusCode.InternalServerError;
 			}
+			// Send the web application's response, then close the connection
 			resp = new HttpResponse(sock, code, Utility.CONTENT_TYPES[(int)ResponseType.TEXT_HTML],
 				html, req.Version);
 			resp.Send();
