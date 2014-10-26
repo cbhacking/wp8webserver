@@ -1,4 +1,9 @@
-﻿<phone:PhoneApplicationPage
+﻿<!-- WebAccess\MainPage.xaml
+ Author: GoodDayToDie on XDA-Developers forum
+ License: Microsoft Public License (MS-PL)
+ Version: 0.5.6
+ Source: https://wp8webserver.codeplex.com -->
+<phone:PhoneApplicationPage
     x:Class="WebAccess.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -43,12 +48,13 @@
         <StackPanel x:Name="TitlePanel" Grid.Row="0" Margin="12,17,0,28">
             <TextBlock Text="WEBSERVER" Style="{StaticResource PhoneTextNormalStyle}" Margin="12,0"/>
             <TextBlock Text="native access" Margin="9,-7,0,0" Style="{StaticResource PhoneTextTitle1Style}"/>
+            <TextBlock Text="Application v0.5.6, Server v0.4.2, AllCapabilities" Style="{StaticResource PhoneTextNormalStyle}" Margin="12,0"/>
         </StackPanel>
 
         <!--ContentPanel - place additional content here-->
         <Grid x:Name="ContentPanel" Grid.Row="1" Margin="12,0,12,0">
             <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" Text="Server URL: " VerticalAlignment="Top" Foreground="Gray"/>
-            <HyperlinkButton x:Name="ServerUrl" HorizontalAlignment="Left" Margin="121,10,0,0" VerticalAlignment="Top" Content="No WiFi Connection!" Click="ServerUrl_Click" />
+            <HyperlinkButton x:Name="ServerUrl" HorizontalAlignment="Left" Margin="121,10,0,0" VerticalAlignment="Top" Content="Server is starting..." Click="ServerUrl_Click" />
             <Button x:Name="RestartButton" Content="Restart server" HorizontalAlignment="Left" Margin="10,119,0,0" VerticalAlignment="Top" Width="436" Click="RestartButton_Click"/>
             <TextBox x:Name="PortText" HorizontalAlignment="Left" Height="72" TextWrapping="Wrap" Text="9999" VerticalAlignment="Top" Width="247" Margin="209,42,0,0" InputScope="Number"/>
             <TextBlock HorizontalAlignment="Left" TextWrapping="Wrap" Text="Specify port number:" VerticalAlignment="Top" RenderTransformOrigin="0.939,2.926" Margin="10,67,0,0"/>
