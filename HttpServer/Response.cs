@@ -123,13 +123,54 @@ namespace HttpServer
 		/// </summary>
 		public void Send ()
 		{
+			this.Send(ConnectionPersistence.CLOSE);
+		}
+
+		/// <summary>
+		/// Sends to the HTTP response asynchronously, then closes the connection if not persistent
+		/// </summary>
+		/// <param name="persist">Sets or overrides exiting Connection header unless Unspecified,
+		/// in which case observes existing header or default behavior for version</param>
+		public void Send (ConnectionPersistence persist)
+		{
+			// By default, don't do anything with the connection after sending
+			EventHandler<SocketAsyncEventArgs> finished = (sender, comp) => { };
+			if (persist != ConnectionPersistence.UNSPECIFIED)
+			{	// There's some value for "persist", use it
+				headers["Connection"] = Utility.PERSISTENCE[(int)persist];
+				if (ConnectionPersistence.CLOSE == persist)
+				{	// Close the connection after send is complete
+					finished = (sender, comp) => { socket.Close(); };
+				}
+			}
+			else if (headers.ContainsKey("Connection"))
+			{	// Figure out what to do with the connection
+				String conn = headers["Connection"];
+				if (Utility.PERSISTENCE[(int)ConnectionPersistence.CLOSE] == conn)
+				{
+					finished = (sender, comp) => { socket.Close(); };
+				}
+				else if (Utility.PERSISTENCE[(int)ConnectionPersistence.KEEP_ALIVE] == conn)
+				{
+					persist = ConnectionPersistence.KEEP_ALIVE;
+				}
+				else if (this.version != HttpVersion.ONE_POINT_ONE)
+				{	// Default to close for pre-1.1
+					finished = (sender, comp) => { socket.Close(); };
+				}
+			}
+			// If that falls through, there's no Connection header
+			else if (this.version != HttpVersion.ONE_POINT_ONE)
+			{	// Default to close for pre-1.1
+				finished = (sender, comp) => { socket.Close(); };
+			}
 			byte[] resp = buildResponse();
 			SocketAsyncEventArgs args = new SocketAsyncEventArgs();
 			args.SetBuffer(resp, 0, resp.Length);
-			args.Completed += (sender, comp) => { socket.Close(); };
+			args.Completed += finished;
 			socket.SendBufferSize = resp.Length;
 			if (!socket.SendAsync(args))
-				socket.Close();
+				finished(null, null);
 		}
 
 		/// <summary>
