@@ -119,11 +119,13 @@ namespace HttpServer
 		}
 
 		/// <summary>
-		/// Sends the HTTP response asynchronously, then closes the socket.
+//		/// Sends the HTTP response asynchronously, then closes the socket.
+		/// Sends the HTTP response asynchronously, then leaves the socket open.
 		/// </summary>
 		public void Send ()
 		{
-			this.Send(ConnectionPersistence.CLOSE);
+			// TODO: Fix the Close option!
+			this.Send(ConnectionPersistence.KEEP_ALIVE);
 		}
 
 		/// <summary>
@@ -146,13 +148,13 @@ namespace HttpServer
 			else if (headers.ContainsKey("Connection"))
 			{	// Figure out what to do with the connection
 				String conn = headers["Connection"];
-				if (Utility.PERSISTENCE[(int)ConnectionPersistence.CLOSE] == conn)
-				{
-					finished = (sender, comp) => { socket.Close(); };
-				}
-				else if (Utility.PERSISTENCE[(int)ConnectionPersistence.KEEP_ALIVE] == conn)
+				if (conn.Equals(Utility.PERSISTENCE[(int)ConnectionPersistence.KEEP_ALIVE], StringComparison.OrdinalIgnoreCase))
 				{
 					persist = ConnectionPersistence.KEEP_ALIVE;
+				}
+				else if (conn.Equals(Utility.PERSISTENCE[(int)ConnectionPersistence.CLOSE], StringComparison.OrdinalIgnoreCase))
+				{
+					finished = (sender, comp) => { socket.Close(); };
 				}
 				else if (this.version != HttpVersion.ONE_POINT_ONE)
 				{	// Default to close for pre-1.1
