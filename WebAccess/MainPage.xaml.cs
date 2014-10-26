@@ -2,7 +2,7 @@
  * WebAccess\MainPage.xaml.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.4
+ * Version: 0.5.6
  * Source: https://wp8webserver.codeplex.com
  *
  * Finds the WiFi address, displays the URL, and starts the web server.
@@ -87,6 +87,7 @@ namespace WebAccess
 				{
 					StopServer();
 				}
+				bool foundV4 = false;
 				do
 				{
 					String v6 = null;
@@ -95,8 +96,9 @@ namespace WebAccess
 						if (name.IPInformation.NetworkAdapter.IanaInterfaceType == 71)
 						{
 							if (HostNameType.Ipv4 == name.Type)
-							{
+							{	// Found a v4 address; we can exit the loop
 								ServerUrl.Content = "http://" + name.CanonicalName + ":" + port;
+								foundV4 = true;
 								v6 = null;
 								break;
 							}
@@ -106,18 +108,34 @@ namespace WebAccess
 							}
 						}
 					}
-					if (null != v6)
+					if (!foundV4)
 					{
-						if (MessageBoxResult.Cancel == MessageBox.Show(
-							"Unable to find an IPv4 address. An IPv6 address was found, though. Press OK to use it, or Cancel to search again.",
-							"Use IPv6 address?", MessageBoxButton.OKCancel))
+						if (null != v6)
 						{
-							// This is a stupid alternative to goto
-							continue;
+							if (MessageBoxResult.OK == MessageBox.Show(
+								"Unable to find an IPv4 address. An IPv6 address was found, though. Press OK to use it, or Cancel to search again.",
+								"Use IPv6 address?", MessageBoxButton.OKCancel))
+							{
+								ServerUrl.Content = v6;
+								break;
+							}
 						}
-						ServerUrl.Content = v6;
+						else
+						{	// Didn't find either v4 or v6
+							ServerUrl.Content = "Need IP address on WiFi!";
+							if (MessageBoxResult.OK == MessageBox.Show("Web server requires WiFi connection. Pressing OK will open WiFi settings now.",
+								"Open WiFi settings?", MessageBoxButton.OKCancel))
+							{
+								Launcher.LaunchUriAsync(new Uri("ms-settings-wifi:"));
+							}
+							return;
+						}
 					}
-				} while (false);
+					else
+					{	// Found a v4 address
+						break;
+					}
+				} while (true);
 				server = new WebServer(port, WebApplication.ServiceRequest);
 				App.serverRunning = true;
 			}
@@ -177,7 +195,11 @@ namespace WebAccess
 		{
 			if (!App.serverRunning)
 			{
-				MessageBox.Show("Server is not running!");
+				if (MessageBoxResult.OK == MessageBox.Show("The server is not running, probably because it needs an IP address on WiFi and you aren't connected. Open WiFi settings now?",
+					"Server is not running!", MessageBoxButton.OKCancel))
+				{
+					Launcher.LaunchUriAsync(new Uri("ms-settings-wifi:"));
+				}
 				return;
 			}
 			if (!EnableBackground.IsChecked.GetValueOrDefault(false))
