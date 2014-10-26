@@ -172,9 +172,9 @@ namespace HttpServer
 								HttpStatusCode.HttpVersionNotSupported,
 								Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
 								"The protocol version specified in the request is not recognized!\n");
-							// Send the error report, then close the connection; we don't care what else the client wanted
+							// Send the error report, which will close the connection; we don't care what else the client wanted
 							resp.Send();
-							sock.Close(100);
+//							sock.Close(100);
 							return;
 						}
 						if (HttpMethod.INVALID_METHOD == request.Method)
@@ -185,9 +185,9 @@ namespace HttpServer
 								Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
 								"The request HTTP verb (method) is not recognized!\n",
 								request.Version);
-							// Send the error report, then close the connection; we don't care what else the client wanted
+							// Send the error report, which will close the connection; we don't care what else the client wanted
 							resp.Send();
-							sock.Close(100);
+//							sock.Close(100);
 							return;
 						}
 					} while (!request.Complete);
@@ -204,7 +204,7 @@ namespace HttpServer
 							Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
 							"Bad request!\n" + ex.ToString());
 						resp.Send();
-						sock.Close(100);
+//						sock.Close(100);
 					}
 					return;
 				}
@@ -218,7 +218,7 @@ namespace HttpServer
 							Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
 							"Internal Server Error!\n" + ex.ToString() + '\n' + ex.StackTrace);
 						resp.Send();
-						sock.Close(100);
+//						sock.Close(100);
 					}
 					return;
 				}

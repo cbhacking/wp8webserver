@@ -215,8 +215,8 @@ namespace WebAccess
 							reset.Set();
 						offset += data.Length;
 					}
-					// Wait for the last data to be sent (in case of an error, wait two minutes) then close the socket
-					reset.WaitOne(120000);
+					// Wait for the last data to be sent, then close the socket
+					reset.WaitOne();
 					sock.Close();
 					return null;
 				}
