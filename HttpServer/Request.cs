@@ -2,7 +2,7 @@
 	* HttpServer\Request.cs
 	* Author: GoodDayToDie on XDA-Developers forum
 	* License: Microsoft Public License (MS-PL)
-	* Version: 0.4.2
+	* Version: 0.4.3
 	* Source: https://wp8webserver.codeplex.com
 	*
 	* Parses an HTTP request from the listener. Does not perform any I/O.
@@ -45,7 +45,7 @@ namespace HttpServer
 		String bodytext;
 
 		// Parser markers
-		long current;
+		int current;
 		int currentLine;
 		int bodyIndex;
 
@@ -67,7 +67,7 @@ namespace HttpServer
 			multipartboundry = null;
 			body = null;
 			bodytext = null;
-			current = 0L;
+			current = 0;
 			currentLine = 0;
 			bodyIndex = -1;
 		}
@@ -88,11 +88,13 @@ namespace HttpServer
 			urlparams = null;
 		}
 
-		public HttpRequest (ref byte[] request) : this()
+		public HttpRequest (ref byte[] request, int length) : this()
 		{
-			request = parseRequest(request, false);
-			return;
+			request = parseRequest(request, length, false);
 		}
+
+		public HttpRequest (ref byte[] request) : this(ref request, request.Length)
+		{ }
 
 		private void parseFirstLine (String line)
 		{
@@ -251,12 +253,16 @@ namespace HttpServer
 			}
 		}
 
-		private byte[] parseRequest (byte[] request, bool resume)
+		private byte[] parseRequest (byte[] request, int length, bool resume)
 		{
+			if (length > request.Length || length < 0)
+			{
+				throw new ArgumentOutOfRangeException("length", length, "The length must be between zero and request.Length, inclusive!");
+			}
 			if (!resume)
 			{
 				// Start the search from the beginning
-				current = 0L;
+				current = 0;
 				body = null;
 				bodytext = null;
 				bodyIndex = -1;
@@ -279,7 +285,7 @@ namespace HttpServer
 						parseHeaders(lines, 1);
 						// End of headers reached, skip over the blank line
 						current += 4;
-						bodyIndex = (int)current;
+						bodyIndex = current;
 						break;
 					}
 				}
@@ -497,7 +503,7 @@ namespace HttpServer
 		/// <summary>
 		/// Gets whether the request data was sufficient for the full request
 		/// </summary>
-		public bool Complete { get { return ((-1L == current) || (-1 == currentLine)); } }
+		public bool Complete { get { return ((-1 == current) || (-1 == currentLine)); } }
 
 		/// <summary>
 		/// Gets the HTTP request method (such as GET or HEAD).
@@ -621,9 +627,14 @@ namespace HttpServer
 
 		public byte[] Continue (byte[] request)
 		{
+			return Continue(request, request.Length);
+		}
+
+		public byte[] Continue (byte[] request, int length)
+		{
 			if (this.Complete)
 				return request;
-			return parseRequest(request, true);
+			return parseRequest(request, length, true);
 		}
 	}
 }
