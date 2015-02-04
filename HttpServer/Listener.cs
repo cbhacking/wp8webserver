@@ -90,6 +90,7 @@ namespace HttpServer
 		/// </summary>
 		private void listener ()
 		{
+			Thread.CurrentThread.Name = "ListenerThread";
 			AutoResetEvent acceptreset = new AutoResetEvent(false);
 			while (!cancelsource.IsCancellationRequested)
 			{
@@ -120,6 +121,7 @@ namespace HttpServer
 		/// <param name="args"></param>
 		private void accepter (SocketAsyncEventArgs args)
 		{
+			Thread.CurrentThread.Name = "AcceptAsyncThread";
             if (args.SocketError == SocketError.Success)
             {
 				// This is already in its own thread; just call the handler directly
