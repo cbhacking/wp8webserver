@@ -2,7 +2,7 @@
  * HttpServer\Listener.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.2
+ * Version: 0.4.3
  * Source: https://wp8webserver.codeplex.com
  *
  * Implements the listener portion of an HTTP server.
@@ -224,6 +224,40 @@ namespace HttpServer
 			} while (sock.Connected);
 		}
 
+		private void binaryHandler (Socket sock)
+		{
+			sock.ReceiveBufferSize = (1 << 20);	// Use a 1MB buffer
+			byte[] data = new byte[sock.ReceiveBufferSize];
+			SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+			do
+			{	// Get one request at a time
+				HttpRequest req = new HttpRequest();
+				int totalread = 0;
+				try
+				{
+					do
+					{	// Repetitively read until request is complete
+						if (totalread >= data.Length)
+						{	// Enlarge the buffer
+							byte[] newdata = new byte[2 * data.Length];
+							Array.Copy(data, newdata, data.Length);
+							data = newdata;
+						}
+						args.SetBuffer(data, totalread, data.Length - totalread);
+						getBytes(sock, args: args);
+						if (SocketError.Success == args.SocketError)
+						{
+							totalread += args.BytesTransferred;
+							byte[] remainder = req.Continue(data, totalread);
+							// There might be another request, or at least the start of one
+							totalread -= (data.Length - remainder.Length);
+							data = remainder;
+						}
+					} while (!req.Complete);
+				}
+			}
+		}
+
 		/// <summary>
 		/// Retrieves waiting data on the socket. Will block if no data is available
 		/// </summary>
@@ -264,18 +298,24 @@ namespace HttpServer
 			}
 		}
 
-		private byte[] getBytes (Socket sock, int maxLen = (1 << 20))
+		private byte[] getBytes (Socket sock, int maxLen = (1 << 20), int timeout = 120000, SocketAsyncEventArgs args = null)
 		{
 			AutoResetEvent wait = new AutoResetEvent(false);
-			byte[] buffer = new byte[maxLen];
-			SocketAsyncEventArgs args = new SocketAsyncEventArgs();
-			args.SetBuffer(buffer, 0, maxLen);
-			args.Completed += (Object s, SocketAsyncEventArgs a2) => { args = a2; wait.Set(); };
+			bool makeBuffer = false;
+			if (null == args)
+			{
+				args = new SocketAsyncEventArgs();
+				args.SetBuffer(new byte[maxLen], 0, maxLen);
+				args.Completed += (Object s, SocketAsyncEventArgs a2) => { args = a2; wait.Set(); };
+				makeBuffer = true;
+			}
+			byte[] buffer = args.Buffer;
 			if (sock.ReceiveAsync(args))
 			{
 				// It's running in the background; block until done
-				if (!wait.WaitOne(120000))
+				if (!wait.WaitOne(timeout))
 				{	// Timed out; stop listening for more data
+					args.SocketError = SocketError.TimedOut;
 					return null;
 				}
 			}
@@ -286,19 +326,20 @@ namespace HttpServer
 				if (reclen > 0)
 				{
 					// We got *some* data
-					if (reclen < maxLen)
+					if (makeBuffer && (reclen < maxLen))
 					{
 						// Shrink the returned buffer
 						byte[] newbuf = new byte[reclen];
 						Array.Copy(buffer, newbuf, reclen);
 						return newbuf;
 					}
-					// We filled the buffer
+					// We filled the buffer, or we don't care because the caller knows the args
 					return buffer;
 				}
 				else
 				{
 					// Connection closed gracefully
+					args.SocketError = SocketError.Disconnecting;
 					return null;
 				}
 			}
