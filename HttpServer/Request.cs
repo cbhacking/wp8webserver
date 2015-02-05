@@ -424,7 +424,7 @@ namespace HttpServer
 							}
 							#endregion
 							// Note that we're done with this request, return any remnant
-							current = -1L;
+							current = -1;
 							currentLine = -1;
 							request = request.Substring(endIndex + (int)contentlength);
 						}
@@ -432,7 +432,7 @@ namespace HttpServer
 					else
 					{
 						// There is no body to this request; we're done
-						current = -1L;
+						current = -1;
 						currentLine = -1;
 						request = request.Substring(endIndex);
 					}
