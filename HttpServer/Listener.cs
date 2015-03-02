@@ -126,7 +126,8 @@ namespace HttpServer
             {
 				// This is already in its own thread; just call the handler directly
 				//new Thread(handler).Start(args.AcceptSocket);
-				handler(args.AcceptSocket);
+//				handler(args.AcceptSocket);
+				binaryHandler(args.AcceptSocket);
 			}
 		}
 
@@ -137,7 +138,8 @@ namespace HttpServer
 		private void handler (Object o)
 		{
 			Socket sock = (Socket)o;
-			handler(sock);
+//			handler(sock);
+			binaryHandler(sock);
 		}
 
 		/// <summary>
@@ -226,37 +228,101 @@ namespace HttpServer
 
 		private void binaryHandler (Socket sock)
 		{
-			sock.ReceiveBufferSize = (1 << 20);	// Use a 1MB buffer
-			byte[] data = new byte[sock.ReceiveBufferSize];
+			int maxlen = 1 << 20;	// Use a 1MB buffer
+			sock.ReceiveBufferSize = maxlen;
+			byte[] data = new byte[maxlen];
 			SocketAsyncEventArgs args = new SocketAsyncEventArgs();
 			do
 			{	// Get one request at a time
-				HttpRequest req = new HttpRequest();
+				HttpRequest request = new HttpRequest();
 				int totalread = 0;
 				try
 				{
 					do
 					{	// Repetitively read until request is complete
-						if (totalread >= data.Length)
+						if ((totalread + maxlen) > data.Length)
 						{	// Enlarge the buffer
 							byte[] newdata = new byte[2 * data.Length];
 							Array.Copy(data, newdata, data.Length);
 							data = newdata;
 						}
 						args.SetBuffer(data, totalread, data.Length - totalread);
-						getBytes(sock, args: args);
+						getBytes(sock, maxlen, 120000, args);
 						if (SocketError.Success == args.SocketError)
 						{
 							totalread += args.BytesTransferred;
-							byte[] remainder = req.Continue(data, totalread);
+							byte[] remainder = request.Continue(data, totalread);
 							// There might be another request, or at least the start of one
-							totalread -= (data.Length - remainder.Length);
-							data = remainder;
+							if (null != remainder)
+							{
+								totalread -= (data.Length - remainder.Length);
+								data = remainder;
+							}
+							else
+							{	// No further data, just reset the offset
+								totalread = 0;
+							}
 						}
-					} while (!req.Complete);
+						else
+						{	// Some error occurred
+							return;
+						}
+						// Sanity check what we have so far
+						if (HttpVersion.INVALID_VERSION == request.Version)
+						{
+							HttpResponse resp = new HttpResponse(
+								sock,
+								HttpStatusCode.HttpVersionNotSupported,
+								Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
+								"The protocol version specified in the request is not recognized!\n");
+							// Send the error report, which will close the connection; we don't care what else the client wanted
+							resp.Send(ConnectionPersistence.CLOSE);
+							return;
+						}
+						if (HttpMethod.INVALID_METHOD == request.Method)
+						{
+							HttpResponse resp = new HttpResponse(
+								sock,
+								HttpStatusCode.NotImplemented,
+								Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
+								"The request HTTP verb (method) is not recognized!\n",
+								request.Version);
+							// Send the error report, which will close the connection; we don't care what else the client wanted
+							resp.Send(ConnectionPersistence.CLOSE);
+							return;
+						}
+					} while (!request.Complete);
+					// If we get here, this request is complete (might be more in data)
+					servicer(request, sock);
 				}
-			}
-		}
+				catch (ProtocolViolationException ex)
+				{
+					if (sock.Connected)
+					{
+						HttpResponse resp = new HttpResponse(
+							sock,
+							HttpStatusCode.BadRequest,
+							Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
+							"Bad request!\n" + ex.ToString());
+						resp.Send(ConnectionPersistence.CLOSE);
+					}
+					return;
+				}
+				catch (Exception ex)
+				{
+					if (sock.Connected)
+					{
+						HttpResponse resp = new HttpResponse(
+							sock,
+							HttpStatusCode.InternalServerError,
+							Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
+							"Internal Server Error!\n" + ex.ToString() + '\n' + ex.StackTrace);
+						resp.Send(ConnectionPersistence.CLOSE);
+					}
+					return;
+				}
+			} while (sock.Connected);
+        }
 
 		/// <summary>
 		/// Retrieves waiting data on the socket. Will block if no data is available
@@ -306,8 +372,19 @@ namespace HttpServer
 			{
 				args = new SocketAsyncEventArgs();
 				args.SetBuffer(new byte[maxLen], 0, maxLen);
-				args.Completed += (Object s, SocketAsyncEventArgs a2) => { args = a2; wait.Set(); };
+				args.Completed += 
+					(Object s, SocketAsyncEventArgs a2) => {
+						args = a2;
+						wait.Set(); };
+				args.UserToken = args;
 				makeBuffer = true;
+			}
+			else if (null == args.UserToken)
+			{
+				args.Completed += 
+					(Object s, SocketAsyncEventArgs a2) => {
+						args = a2;
+						wait.Set(); };
 			}
 			byte[] buffer = args.Buffer;
 			if (sock.ReceiveAsync(args))
