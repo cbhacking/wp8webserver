@@ -270,7 +270,7 @@ namespace HttpServer
 			if (bodyIndex <= 0)
 			{
 				// Haven't found the end of the headers yet.
-				for (; current < (request.Length - 3); current++)
+				for (; current < (length - 3); current++)
 				{
 					// Find the end of the headers
 					if (Utility.CR == request[current] && Utility.CR == request[current + 2] &&
@@ -291,7 +291,23 @@ namespace HttpServer
 				}
 			}
 			// Check whether the request is done
-			if ((contentlength > 0) && ((request.Length - bodyIndex) >= contentlength))
+			if (-1 != bodyIndex && -1 == contentlength)
+			{	// We'd know if there's a body, and there isn't; we're done
+				current = -1;
+				if (length > bodyIndex)
+				{
+					// There may be another request past this one
+					byte[] remainder = new byte[length - bodyIndex];
+					Array.Copy(request, (int)bodyIndex, remainder, 0, remainder.Length);
+					return remainder;
+				}
+				else
+				{
+					// No remainder in this particular packet
+					return null;
+				}
+			}
+			else if ((contentlength > 0) && ((length - bodyIndex) >= contentlength))
 			{
 				// We have the entire body already
 				body = new byte[contentlength];
@@ -330,10 +346,10 @@ namespace HttpServer
 				// Since we have the whole body...
 				current = -1;
 				long totallen = (contentlength > 0) ? bodyIndex + contentlength : bodyIndex;
-				if (request.Length > totallen)
+				if (length > totallen)
 				{
 					// There may be another request past this one
-					byte[] remainder = new byte[request.Length - totallen];
+					byte[] remainder = new byte[length - totallen];
 					Array.Copy(request, (int)totallen, remainder, 0, remainder.Length);
 					return remainder;
 				}
