@@ -48,9 +48,8 @@ namespace HttpServer
 			serversock.Bind(local);
 			serversock.Listen(5);
 			cancelsource = new CancellationTokenSource();
-			// Use a different thread to handle connection attempts, so this one doesn't block
-			listenthread = new Thread(listener);
-			listenthread.Start();
+			// Launch a thread that asynchronously calls accept
+			listener();
 		}
 
 		~WebServer ()
@@ -90,27 +89,25 @@ namespace HttpServer
 		/// </summary>
 		private void listener ()
 		{
-			Thread.CurrentThread.Name = "ListenerThread";
-			AutoResetEvent acceptreset = new AutoResetEvent(false);
-			while (!cancelsource.IsCancellationRequested)
+			if (!cancelsource.IsCancellationRequested)
 			{
 				SocketAsyncEventArgs args = new SocketAsyncEventArgs();
 				args.Completed += (sender, completedargs) =>
 				{
+					// We are in an async thread already.
+					// First business: spin off a new listener thread.
+					listener();
+					// Then, process the request and exit when the socket closes.
 					accepter(completedargs);
-					// Resume the listen loop
-					acceptreset.Set();
 				};
-				if (serversock.AcceptAsync(args))
+				if (!serversock.AcceptAsync(args))
 				{
-					// Operation is pending, and will fire the Completed event
-					acceptreset.WaitOne();
+					// Accepted synchronously, but still need to set up a new listen thread.
+					listener();
+					// Also, we don't want to block while processing, so request a new thread.
+					accepter(args, true);
 				}
-				else
-				{
-					// Accepted synchronously, so it didn't raise the event
-					accepter(args);
-				}
+				// Return quickly
 			}
 		}
 
@@ -119,21 +116,30 @@ namespace HttpServer
 		/// It runs in the thread created by AcceptAsync
 		/// </summary>
 		/// <param name="args"></param>
-		private void accepter (SocketAsyncEventArgs args)
+		private void accepter (SocketAsyncEventArgs args, bool newThread = false)
 		{
-			Thread.CurrentThread.Name = "AcceptAsyncThread";
             if (args.SocketError == SocketError.Success)
             {
-				// This is already in its own thread; just call the handler directly
-				//new Thread(handler).Start(args.AcceptSocket);
-				handler(args.AcceptSocket);
+				if (newThread)
+				{
+					// Create a new thread so we don't block this one.
+					Thread newth = new Thread(handler);
+					newth.Name = "AcceptNewThread";
+					newth.Start(args.AcceptSocket);
+				}
+				else
+				{
+					// This is already in its own thread; just call the handler directly.
+					Thread.CurrentThread.Name = "AcceptAsyncThread";
+					handler(args.AcceptSocket);
+				}
 			}
 		}
 
 		/// <summary>
 		/// Receives the incoming request and processes it
 		/// </summary>
-		/// <param name="o">The network socket</param>
+		/// <param name="o">The SocketAsyncEventArgs</param>
 		private void handler (Object o)
 		{
 			Socket sock = (Socket)o;
