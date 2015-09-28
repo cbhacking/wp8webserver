@@ -2,7 +2,7 @@
  * HttpServer\Mime.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.0
+ * Version: 0.5.0
  * Source: https://wp8webserver.codeplex.com
  *
  * Basic implementation of Multipart Internet Mail Extensions.
@@ -21,6 +21,13 @@ namespace HttpServer
 		byte[] body;
 		String multipartboundry;
 		MimePart[] bodyParts;
+		int offset;
+		int length;
+
+		public byte[] Body
+		{
+			get { return body; }
+		}
 
 		private void parseHeaders (String[] lines)
 		{
@@ -78,48 +85,89 @@ namespace HttpServer
 		/// <param name="boundary">The boundary string, from the Content-Type header</param>
 		/// <param name="startIndex">The 0-based index to begin the search at (default is 0)</param>
 		/// <returns>Index of the start of the next boundary line, or -1 if no such line exists</returns>
-		public static int findBoundary (byte[] data, String boundary, int startIndex = 0)
+		public static MimePart[] findParts (byte[] data, String boundary, int startIndex = 0)
 		{
-			int ret = startIndex - 1;
-			while (ret < (data.Length - boundary.Length))
+			List<MimePart> parts = new List<MimePart>();
+			MimePart part = null;
+			int lineStart = startIndex - 1;
+			int start = -1;
+			// First, we have to find the start boundary.
+			// Scan the body for lines long enough to contain the boundary marker.
+			while (lineStart < (data.Length - (boundary.Length * 2)))
 			{
 				// Find the next line
-				int next = Array.IndexOf<byte>(data, (byte)'\n', ++ret);
-				// If we found the end (instead of a newline) that's OK too
-				if (-1 == next) next = data.Length;
-				// Make sure the line is long enough to hold the boundary
-				if ((next - ret) >= boundary.Length)
+				int lineEnd = Array.IndexOf<byte>(data, (byte)'\n', ++lineStart);
+				if (-1 == lineEnd)
 				{
-					// Found a long enough line that it could be a boundary
-					for (int j = ret; j < (ret + 2); j++)
+					// We found the end (instead of a newline), so there's no more parts
+					return null;
+				}
+				// Make sure the line is long enough to hold the boundary
+				if ((lineEnd - lineStart) >= boundary.Length)
+				{
+					// Found a long-enough line; Stringify it and check.
+					String line = Encoding.UTF8.GetString(data, lineStart, (lineEnd - lineStart));
+					if (line.Contains(boundary))
 					{
-						int k;
-						for (k = 0; (k < boundary.Length) && ((k + j) < next); k++)
+						// Check if this is the first boundary or a subsequent one.
+						if (-1 == start)
 						{
-							if (data[k + j] != (byte)boundary[k])
+							// OK, we found the first boundary! Remember it and find the next.
+							start = lineEnd + 1;
+						}
+						else
+						{
+							// We found a full MIME part! Parse it.
+							part = new MimePart();
+							part.offset = start;
+							part.length = lineStart - start;
+
+							// Locate the headers (\r\n\r\n), searching from end of boundary line.
+							for (start -= 2; start < (lineStart - 3); start++)
 							{
-								break;
+								// Find the end of the headers
+								if (Utility.CR == data[start] &&
+									Utility.CR == data[start + 2] &&
+									Utility.LF == data[start + 1] &&
+									Utility.LF == data[start + 3])
+								{
+									// End of the headers found
+									String head = Encoding.UTF8.GetString(
+										data,
+										part.offset,
+										start - part.offset);
+									String[] lines = head.Split(new String[] { "\r\n" },
+										StringSplitOptions.RemoveEmptyEntries);
+									// Parse the headers for this part.
+									part.parseHeaders(lines);
+									// End of headers reached, skip over the blank line
+									start += 4;
+									part.body = new byte[lineStart - start];
+									Array.Copy(data, start, part.body, 0, lineStart - start);
+									// Done with headers
+									break;
+								}
+								if (null == part.headers)
+								{
+									// We never found the end of the headers. It's all body?
+									part.body = new byte[part.length];
+									Array.Copy(data, part.offset, part.body, 0, part.length);
+								}
 							}
-						}
-						if ((boundary.Length) == k)
-						{
-							// We found the end of the boundary and exited the loop cleanly
-							return ret;
-						}
-						// If we get here, we didn't find the boundary
-						// Check for a prepended - character
-						if ((byte)'-' != data[j])
-						{
-							// The whole line didn't match, and it doesn't start with a -
-							break;
+							// Part fully parsed
+							parts.Add(part);
+							// Keep going; there may be more parts.
+							start = lineEnd + 1;
 						}
 					}
 				}
-				// Either the line wasn't long enough or it didn't have the boundary
-				ret = next;
+				// Maybe the line wasn't long enough or it didn't have the boundary.
+				// Or maybe it did, and it was the first boundary, so we have to find another.
+				// Or maybe we even found a whole part, parsed it, and are now looking for more.
+				lineStart = lineEnd;
 			}
-			// We didn't find the boundary line
-			return -1;
+			// We didn't find an expected boundary so there's no (more) part(s).
+			return parts.Count > 0 ? parts.ToArray() : null;
 		}
 	}
 

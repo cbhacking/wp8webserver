@@ -2,7 +2,7 @@
 	* HttpServer\Request.cs
 	* Author: GoodDayToDie on XDA-Developers forum
 	* License: Microsoft Public License (MS-PL)
-	* Version: 0.4.3
+	* Version: 0.5.0
 	* Source: https://wp8webserver.codeplex.com
 	*
 	* Parses an HTTP request from the listener. Does not perform any I/O.
@@ -43,6 +43,7 @@ namespace HttpServer
 		// Body fields
 		byte[] body;
 		String bodytext;
+		MimePart[] bodyparts;
 
 		// Parser markers
 		int current;
@@ -67,6 +68,7 @@ namespace HttpServer
 			multipartboundry = null;
 			body = null;
 			bodytext = null;
+			bodyparts = null;
 			current = 0;
 			currentLine = 0;
 			bodyIndex = -1;
@@ -88,6 +90,17 @@ namespace HttpServer
 			urlparams = null;
 		}
 
+		/// <summary>
+		/// Creates a new HttpRequest from the specified portion of the provided String.
+		/// </summary>
+		/// <remarks>
+		/// If the array does not contain a complete request, the Complete property will be false.
+		/// It is possible to add additional data to the request using the Continue method.
+		/// There can be more than one request in an array; only the first will be constructed.
+		/// Any data beyond the first request will be returned in <paramref name="request"/>.
+		/// </remarks>
+		/// <param name="request">Byte array containing the request. Returns further data.</param>
+		/// <param name="length">Number of bytes, 0-indexed, of the array to process.</param>
 		public HttpRequest (ref byte[] request, int length) : this()
 		{
 			request = parseRequest(request, length, false);
@@ -329,18 +342,13 @@ namespace HttpServer
 					}
 					else if (ct.Contains("text"))
 					{
-						// Text without specified charset. Oookay then
+						// Text without specified charset. Oookay then, let's try autodetection.
 						bodytext = new System.IO.StreamReader(new System.IO.MemoryStream(body)).ReadToEnd();
 					}
 					else if (multipartboundry != null)
 					{
-						// Figure out how many parts there are
-						List<int> partIndices = new List<int>();
-						int idx = MimePart.findBoundary(body, multipartboundry);
-						while (idx > 0)
-						{
-							partIndices.Add(idx);
-						}
+						// Get the collection of parts.
+						bodyparts = MimePart.findParts(body, multipartboundry);
 					}
 				}
 				// Since we have the whole body...
@@ -570,19 +578,21 @@ namespace HttpServer
 					}
 					else
 					{
-						String[] items = querystring.Split(new char[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
+						String[] items = querystring.Split(
+							new char[] { '&' },
+							StringSplitOptions.RemoveEmptyEntries);
 						urlparams = new Dictionary<String, String>(items.Length);
 						foreach (String item in items)
 						{
 							if (item.Contains('='))
 							{
-								String name = HttpUtility.UrlDecode(item.Substring(0, item.IndexOf('=')));
-								String value = HttpUtility.UrlDecode(item.Substring(item.IndexOf('=') + 1));
-								urlparams[name] = value;
+								String[] pair = item.Split(new char[] { '=' }, 2);
+								urlparams[HttpUtility.UrlDecode(pair[0])] =
+									HttpUtility.UrlDecode(pair[1]);
 							}
 							else
 							{
-								urlparams[item] = null;
+								urlparams[HttpUtility.UrlDecode(item)] = null;
 							}
 						}
 					}

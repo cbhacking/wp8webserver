@@ -2,7 +2,7 @@
  * HttpServer\Response.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.2
+ * Version: 0.5.0
  * Source: https://wp8webserver.codeplex.com
  *
  * Template to construct an HTTP response.
