@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.6
+ * Version: 0.5.7
  * Source: https://wp8webserver.codeplex.com
  *
  * Handles GET requests from the web server.
@@ -34,6 +34,11 @@ namespace WebAccess
 {
 	public static class WebApplication
 	{
+		static WebApplication ()
+		{
+			nfs.InitializeRoot();
+		}
+
 		public static void ServiceRequest (HttpRequest req, Socket sock)
 		{
 			String content = null;
@@ -322,8 +327,10 @@ namespace WebAccess
 					// Build a .REG file (named based on the reg key) and upload it to the user
 					String file = RegTools.BuildRegFile(hk, path);
 					if (null != file)
-						HttpResponse.Redirect(sock,
-							"/Filesystem?path=" + Path.GetDirectoryName(file) + "&download=" + Path.GetFileName(file));
+						HttpResponse.Redirect(
+							sock,
+							"/Filesystem?path=" + Path.GetDirectoryName(file) + "&download=" + 
+							WebUtility.UrlEncode(Path.GetFileName(file)));
 					return null;
 				}
 				// Else, load the requested registry key
