@@ -2,7 +2,7 @@
  * HttpServer\Listener.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.2
+ * Version: 0.4.3
  * Source: https://wp8webserver.codeplex.com
  *
  * Implements the listener portion of an HTTP server.
@@ -25,7 +25,6 @@ namespace HttpServer
 	public class WebServer : IDisposable
 	{
 		Socket serversock;
-		Thread listenthread;
 		RequestServicer servicer;
 		CancellationTokenSource cancelsource;
 
@@ -72,10 +71,6 @@ namespace HttpServer
 		public void Close ()
 		{
 			cancelsource.Cancel();
-			if (listenthread.IsAlive)
-			{
-				listenthread.Abort();
-			}
 			if (serversock.Connected)
 			{
 				serversock.Shutdown(SocketShutdown.Both);

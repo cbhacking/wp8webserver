@@ -2,7 +2,7 @@
 	* HttpServer\Request.cs
 	* Author: GoodDayToDie on XDA-Developers forum
 	* License: Microsoft Public License (MS-PL)
-	* Version: 0.4.2
+	* Version: 0.4.3
 	* Source: https://wp8webserver.codeplex.com
 	*
 	* Parses an HTTP request from the listener. Does not perform any I/O.
@@ -43,6 +43,7 @@ namespace HttpServer
 		// Body fields
 		byte[] body;
 		String bodytext;
+		MimePart[] bodyparts;
 
 		// Parser markers
 		long current;
@@ -307,18 +308,13 @@ namespace HttpServer
 					}
 					else if (ct.Contains("text"))
 					{
-						// Text without specified charset. Oookay then
+						// Text without specified charset. Oookay then, let's try autodetection.
 						bodytext = new System.IO.StreamReader(new System.IO.MemoryStream(body)).ReadToEnd();
 					}
 					else if (multipartboundry != null)
 					{
-						// Figure out how many parts there are
-						List<int> partIndices = new List<int>();
-						int idx = MimePart.findBoundary(body, multipartboundry);
-						while (idx > 0)
-						{
-							partIndices.Add(idx);
-						}
+						// Get the collection of parts.
+						bodyparts = MimePart.findParts(body, multipartboundry);
 					}
 				}
 				// Since we have the whole body...
