@@ -2,7 +2,7 @@
  * HttpServer\Mime.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.0
+ * Version: 0.5.1
  * Source: https://wp8webserver.codeplex.com
  *
  * Basic implementation of Multipart Internet Mail Extensions.
@@ -19,6 +19,9 @@ namespace HttpServer
 	{
 		Dictionary<String, String> headers;
 		byte[] body;
+		String bodyText;
+		String name;
+		String filename;
 		String multipartboundry;
 		MimePart[] bodyParts;
 		int offset;
@@ -51,9 +54,37 @@ namespace HttpServer
 					headerValue = null;
 				}
 				// Check for particularly important headers
-				if (headerName.Equals("Content-Type"))
+				if (headerName.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase))
 				{
-					// For now, just look for multipart
+					// Split the parts of the value; this could be a file.
+					if (null == headerValue)
+					{
+						// I don't think undefined content types are legal...
+						throw new ProtocolViolationException(
+							"Invalid value for HTTP header (" + line + ")");
+					}
+					String[] pieces = headerValue.Split(
+						new char[] { ' ', ';' },
+						StringSplitOptions.RemoveEmptyEntries);
+					foreach (String piece in pieces)
+					{
+						String[] bits = piece.Split(
+							new char[] { ' ', '=', '\"' },
+							StringSplitOptions.RemoveEmptyEntries);
+						// Check for common disposition pieces.
+						if (bits[0].Equals("name", StringComparison.OrdinalIgnoreCase))
+						{
+							name = (bits.Length < 2) ? null : bits[1];
+						}
+						else if (bits[0].Equals("filename", StringComparison.OrdinalIgnoreCase))
+						{
+							filename = (bits.Length < 2) ? null : bits[1];
+						}
+					}
+				}
+				else if (headerName.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+				{
+					// For now, just look for multipart.
 					if (null == headerValue)
 					{
 						// I don't think undefined content types are legal...
@@ -93,20 +124,23 @@ namespace HttpServer
 			int start = -1;
 			// First, we have to find the start boundary.
 			// Scan the body for lines long enough to contain the boundary marker.
-			while (lineStart < (data.Length - (boundary.Length * 2)))
+			while (lineStart < (data.Length - boundary.Length))
 			{
 				// Find the next line
 				int lineEnd = Array.IndexOf<byte>(data, (byte)'\n', ++lineStart);
 				if (-1 == lineEnd)
 				{
-					// We found the end (instead of a newline), so there's no more parts
-					return null;
+					// We found the end (instead of a newline); treat the whole thing as a line.
+					lineEnd = data.Length;
 				}
 				// Make sure the line is long enough to hold the boundary
 				if ((lineEnd - lineStart) >= boundary.Length)
 				{
 					// Found a long-enough line; Stringify it and check.
-					String line = Encoding.UTF8.GetString(data, lineStart, (lineEnd - lineStart));
+					String line = Encoding.UTF8.GetString(
+						data,
+						lineStart,
+						(lineEnd - lineStart - 1));
 					if (line.Contains(boundary))
 					{
 						// Check if this is the first boundary or a subsequent one.
@@ -147,12 +181,12 @@ namespace HttpServer
 									// Done with headers
 									break;
 								}
-								if (null == part.headers)
-								{
-									// We never found the end of the headers. It's all body?
-									part.body = new byte[part.length];
-									Array.Copy(data, part.offset, part.body, 0, part.length);
-								}
+							}
+							if (null == part.headers)
+							{
+								// We never found the end of the headers. It's all body?
+								part.body = new byte[part.length];
+								Array.Copy(data, part.offset, part.body, 0, part.length);
 							}
 							// Part fully parsed
 							parts.Add(part);

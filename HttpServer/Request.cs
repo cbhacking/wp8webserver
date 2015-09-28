@@ -2,7 +2,7 @@
 	* HttpServer\Request.cs
 	* Author: GoodDayToDie on XDA-Developers forum
 	* License: Microsoft Public License (MS-PL)
-	* Version: 0.5.0
+	* Version: 0.5.1
 	* Source: https://wp8webserver.codeplex.com
 	*
 	* Parses an HTTP request from the listener. Does not perform any I/O.
@@ -173,6 +173,7 @@ namespace HttpServer
 					fragment = null;
 				}
 			}
+			path = WebUtility.UrlDecode(path);
 			if (firstline.Length == 2 || String.IsNullOrEmpty(firstline[2]))
 			{
 				// No HTTP/VERSION field
@@ -525,7 +526,7 @@ namespace HttpServer
 		}
 
 		/// <summary>
-		/// Gets whether the request data was sufficient for the full request
+		/// Gets whether the request data was sufficient for the full request.
 		/// </summary>
 		public bool Complete { get { return ((-1 == current) || (-1 == currentLine)); } }
 
@@ -536,15 +537,15 @@ namespace HttpServer
 		public HttpMethod Method { get { return method; } }
 
 		/// <summary>
-		/// Gets the path component of the URL, without scheme, hostname, port, query string, or fragment.
-		/// The path is presented as-is and may contain URL-encoded characters
+		/// Gets the URI path component, without scheme, hostname, port, query, or fragment.
+		/// The path has beeing URL-decoded.
 		/// </summary>
 		public String Path { get { return path; } }
 
 		/// <summary>
 		/// Gets the query string component of the URL without the leading '?'.
 		/// The querystring is presented as-is and may contain URL-encoded characters.
-		/// To get name/value pairs, use UrlParameters.
+		/// To get decoded name/value pairs, use UrlParameters.
 		/// </summary>
 		/// <seealso cref="UrlParameters"/>
 		public String QueryString { get { return querystring; } }
@@ -587,12 +588,12 @@ namespace HttpServer
 							if (item.Contains('='))
 							{
 								String[] pair = item.Split(new char[] { '=' }, 2);
-								urlparams[HttpUtility.UrlDecode(pair[0])] =
-									HttpUtility.UrlDecode(pair[1]);
+								urlparams[WebUtility.UrlDecode(pair[0])] =
+									WebUtility.UrlDecode(pair[1]);
 							}
 							else
 							{
-								urlparams[HttpUtility.UrlDecode(item)] = null;
+								urlparams[WebUtility.UrlDecode(item)] = null;
 							}
 						}
 					}
@@ -618,6 +619,19 @@ namespace HttpServer
 		/// The body is presented as-is and may contain encoded characters.
 		/// </summary>
 		public byte[] Body { get { return body; } }
+
+		/// <summary>
+		/// Gets the body of the request as a string.
+		/// Null if there is no body, or body is not text.
+		/// No transformations applied except to convert the text to Unicode.
+		/// </summary>
+		public String BodyText {  get { return this.bodytext; } }
+
+		/// <summary>
+		/// Gets the top-level MIME parts from the body. Null if request body is not multipart.
+		/// MIME parts may contain multipart bodies, with their own MimePart childred.
+		/// </summary>
+		public MimePart[] MimeParts { get { return bodyparts; } }
 
 		public bool ConnectionShouldPersist ()
 		{
