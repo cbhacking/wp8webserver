@@ -27,9 +27,34 @@ namespace HttpServer
 		int offset;
 		int length;
 
+		public Dictionary<String, String> Headers
+		{
+			get { return headers; }
+		}
+
+		public String Filename
+		{
+			get { return filename; }
+		}
+
+		public String Name
+		{
+			get { return name; }
+		}
+
 		public byte[] Body
 		{
 			get { return body; }
+		}
+
+		public String BodyText
+		{
+			get { return bodyText; }
+		}
+
+		public MimePart[] MimeParts
+		{
+			get { return bodyParts; }
 		}
 
 		private void parseHeaders (String[] lines)
@@ -95,7 +120,7 @@ namespace HttpServer
 					{
 						int offset = headerValue.IndexOf("boundary=");
 						if (offset > 0)
-							multipartboundry = headerValue.Substring(offset + 9);
+							multipartboundry = headerValue.Substring(offset + 9).Trim();
 						else
 						{
 							// There is supposed to be a boundary definition here...
@@ -187,6 +212,39 @@ namespace HttpServer
 								// We never found the end of the headers. It's all body?
 								part.body = new byte[part.length];
 								Array.Copy(data, part.offset, part.body, 0, part.length);
+							}
+							// All right, headers are parsed. Let's get the body now...
+							else if (part.headers.ContainsKey("Content-Type"))
+							{
+								String ct = part.headers["Content-Type"];
+								// Find the offset of the value part of the character set.
+								int cso = ct.IndexOf("charset");
+								if (-1 != cso)
+								{
+									// The charset field is present; get the body as a string.
+									cso = ct.IndexOf('=', cso);
+									String cs = ct.Substring(cso + 1).Trim();
+									Encoding enc = Encoding.GetEncoding(cs);
+									part.bodyText = enc.GetString(part.body, 0, part.body.Length);
+								}
+								else if (!String.IsNullOrEmpty(part.multipartboundry))
+								{
+									part.bodyParts = findParts(part.body, part.multipartboundry);
+								}
+							}
+							else
+							{
+								// There are headers, but no Content-Type.
+								// Probably an ordinary value; try to encode it as a string.
+								try
+								{
+									part.bodyText = Encoding.UTF8.GetString(
+										part.body,
+										0,
+										part.body.Length);
+								}
+								catch (Exception)
+								{ }
 							}
 							// Part fully parsed
 							parts.Add(part);

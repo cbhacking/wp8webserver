@@ -124,12 +124,11 @@ namespace HttpServer
 		/// </summary>
 		public void Send ()
 		{
-			// TODO: Fix the Close option!
-			this.Send(ConnectionPersistence.KEEP_ALIVE);
+			this.Send(ConnectionPersistence.UNSPECIFIED);
 		}
 
 		/// <summary>
-		/// Sends to the HTTP response asynchronously, then closes the connection if not persistent
+		/// Sends to the HTTP response asynchronously, then closes the connection if required.
 		/// </summary>
 		/// <param name="persist">Sets or overrides exiting Connection header unless Unspecified,
 		/// in which case observes existing header or default behavior for version</param>
@@ -148,11 +147,15 @@ namespace HttpServer
 			else if (headers.ContainsKey("Connection"))
 			{	// Figure out what to do with the connection
 				String conn = headers["Connection"];
-				if (conn.Equals(Utility.PERSISTENCE[(int)ConnectionPersistence.KEEP_ALIVE], StringComparison.OrdinalIgnoreCase))
+				if (conn.Equals(
+					Utility.PERSISTENCE[(int)ConnectionPersistence.KEEP_ALIVE],
+					StringComparison.OrdinalIgnoreCase))
 				{
 					persist = ConnectionPersistence.KEEP_ALIVE;
 				}
-				else if (conn.Equals(Utility.PERSISTENCE[(int)ConnectionPersistence.CLOSE], StringComparison.OrdinalIgnoreCase))
+				else if (
+					conn.Equals(Utility.PERSISTENCE[(int)ConnectionPersistence.CLOSE],
+					StringComparison.OrdinalIgnoreCase))
 				{
 					finished = (sender, comp) => { socket.Close(); };
 				}
