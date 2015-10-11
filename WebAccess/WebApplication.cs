@@ -163,9 +163,67 @@ namespace WebAccess
 
 		private static String serviceFilesystem (HttpRequest req, Socket sock)
 		{
+			String path = null;
+			// Check for file upload first of all
+			if (req.UrlParameters.ContainsKey("upload"))
+			{
+				String filename = null;
+				byte[] filedata = null;
+				MimePart[] parts = req.MimeParts;
+				if (null != parts)
+				{
+					foreach (MimePart part in parts)
+					{
+						switch (part.Name)
+						{
+							case "path":
+								path = part.BodyText.Trim();
+								if ('\\' != path[path.Length - 1])
+									path += '\\';
+								break;
+							case "file":
+								filename = part.Filename;
+								filedata = part.Body;
+								break;
+						}
+					}
+					// We should now have path, filename, and data... hopefully.
+					if (String.IsNullOrEmpty(path) ||
+						String.IsNullOrEmpty(filename) ||
+						null == filedata)
+					{
+						StringBuilder body = new StringBuilder(
+							"Incorrect parameters in file upload request.\n\n");
+						body.AppendFormat("path = {0}\n", null == path ? "NULL" : path)
+							.AppendFormat("file name = {0}\n", null == filename ? "NULL" : filename)
+							.AppendFormat("file data: {0} bytes",
+								null == filedata ? "NULL" : filedata.Length.ToString());
+						StringBuilder master = readFile("Templates/Master.htm");
+						master.Replace("{TITLE}", "Upload failed!");
+						StringBuilder error = readFile("Templates/Error.htm");
+						error.Replace("{ERROR}", "Invalid file upload");
+						error.Replace("{CONTENT}", body.ToString());
+						master.Replace("{CONTENT}", error.ToString());
+						new HttpResponse(
+							sock,
+							HttpStatusCode.BadRequest,
+							"text/html",
+							master.ToString(),
+							req.Version).Send(ConnectionPersistence.CLOSE);
+						return null;
+					}
+					// OK, write out the uploaded file.
+					String pathname = Path.Combine(path, filename);
+					if (nfs.WriteFile(pathname, filedata))
+					{
+						return "<h3>File uploaded successfully!</h3>" + 
+							buildFileTable(path, "*");
+					}
+				}
+			}
 			if (req.UrlParameters.ContainsKey("path"))
 			{
-				String path = req.UrlParameters["path"];
+				path = req.UrlParameters["path"];
 				if (String.IsNullOrWhiteSpace(path))
 				{
 					// Redirect to the root of the FileSystem node
@@ -230,83 +288,21 @@ namespace WebAccess
 					return null;
 				}
 				// If we got here, not downloading. Assume listing directory contents
-				String search = path;
 				String pattern;
 				if (req.UrlParameters.ContainsKey("pattern"))
 					pattern = req.UrlParameters["pattern"];
 				else
 					pattern = "*";
-				search += pattern;
-				// Get folders, and hyperlink them for navigation
-				String dirs = nfs.GetFileNames(search, false, true);
-				if (null == dirs)
-				{
-					String error = "An error occurred while querying directory list.<br />The error number is " +
-					"<a href=\"http://msdn.microsoft.com/en-us/library/windows/desktop/ms681381(v=vs.85).aspx\">" +
-						nfs.GetError() + "</a>";
-					return error;
-				}
-				String[] array = dirs.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
-				StringBuilder build = new StringBuilder("<table>");
-				foreach (String name in array)
-				{
-					// Suppress . and treat .. specially
-					if (name.Equals("."))
-						continue;
-					if (name.Equals(".."))
-					{
-						build.AppendFormat(
-							"<tr><td>DIR</td><td><a href=\"/Filesystem?path={0}&pattern={2}\">{1}</a></td></tr>",
-							Path.GetDirectoryName(path.Substring(0, path.Length - 1)), name, pattern);
-					}
-					else
-					{
-						build.AppendFormat(
-							"<tr><td>DIR</td><td><a href=\"/Filesystem?path={0}{1}&pattern={2}\">{1}</a></td></tr>",
-							path, name, pattern);
-					}
-				}
-				// Get files, and hyperlink them for download
-				FileInfo[] files = nfs.GetFiles(search, false);
-				// Check to make sure that there just aren't any files, which apparently also returns null...
-				if (null == files || (0 == files.Length))
-				{
-					if (nfs.GetError() != 0)
-					{
-						String error = "An error occurred while querying file list.<br />The error number is " +
-						"<a href=\"http://msdn.microsoft.com/en-us/library/windows/desktop/ms681381(v=vs.85).aspx\">" +
-							nfs.GetError() + "</a>";
-						return error;
-					}
-					else
-					{
-						build.AppendLine("<h4>There are no files in this directory.</h4>");
-					}
-				}
-				else
-				{
-					foreach (FileInfo info in files)
-					{
-						build.AppendFormat(
-							"<tr><td>{2}</td><td><a href=\"/Filesystem?path={0}&download={1}\">{1}</a></td></tr>",
-							path, info.Name, info.Size);
-					}
-				}
-				return build.Append("</table>").ToString();
+				return buildFileTable(path, pattern);
 			}
 			else
 			{
 				// Build the landing page for Filesystem
 				String[] drives = nfs.GetDriveLetters();
-				StringBuilder build = new StringBuilder("<h4>The root of the C: drive is generally inaccessible.</h4><ul>");
+				StringBuilder build = new StringBuilder("<ul>");
 				foreach (String drive in drives)
 				{
-					if (drive.Equals("C:\\"))
-						build.AppendLine("<li><a href=\"/Filesystem?path=C:\\Windows\\&pattern=*\">C:\\Windows\\</a></li>");
-					else
-					{
-						build.AppendFormat("<li><a href=\"/Filesystem?path={0}&pattern=*\">{0}</a></li>\n", drive);
-					}
+					build.AppendFormat("<li><a href=\"/Filesystem?path={0}&pattern=*\">{0}</a></li>\n", drive);
 				}
 				build.AppendFormat("<li><a href=\"/Filesystem?path={0}&pattern=*\">App data directory</a></li>\n", ApplicationData.Current.LocalFolder.Path)
 					.AppendFormat("<li><a href=\"/Filesystem?path={0}&pattern=*\">App install directory</a></li>\n", Package.Current.InstalledLocation.Path);
@@ -364,9 +360,9 @@ namespace WebAccess
 							.Append("&path=");
 						if (!String.IsNullOrEmpty(path))
 						{
-							build.Append(HttpUtility.UrlEncode(path)).Append("\\");
+							build.Append(WebUtility.UrlEncode(path)).Append("\\");
 						}
-						build.Append(HttpUtility.UrlEncode(key)).Append("'>")
+						build.Append(WebUtility.UrlEncode(key)).Append("'>")
 							.Append(key).AppendLine("</a></td></tr>");
 					}
 					build.AppendLine("</table>");
@@ -660,7 +656,79 @@ namespace WebAccess
 <a href='/Registry?hive=80000001&path='>Current User registry hive</a><br />";
 			}
 		}
-		
+
+		private static String buildFileTable (String path, String pattern)
+		{
+			String search = path;
+			if (String.IsNullOrWhiteSpace(pattern))
+			{
+				search += "*";
+			}
+			else
+			{
+				search += pattern;
+			}
+			// Get folders, and hyperlink them for navigation
+			String dirs = nfs.GetFileNames(search, false, true);
+			if (null == dirs)
+			{
+				String error = "An error occurred while querying directory list.<br />The error number is " +
+				"<a href=\"http://msdn.microsoft.com/en-us/library/windows/desktop/ms681381(v=vs.85).aspx\">" +
+					nfs.GetError() + "</a>";
+				return error;
+			}
+			String[] array = dirs.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+			pattern = WebUtility.UrlEncode(pattern);
+			StringBuilder build = new StringBuilder("<table>");
+			foreach (String name in array)
+			{
+				// URL-encode, since they will go into URLs. Maybe should do more encoding, but eh.
+				// Suppress . and treat .. specially
+				if (name.Equals("."))
+					continue;
+				if (name.Equals(".."))
+				{
+					build.AppendFormat(
+						"<tr><td>DIR</td><td><a href=\"/Filesystem?path={0}&pattern={2}\">{1}</a></td></tr>",
+						WebUtility.UrlEncode(Path.GetDirectoryName(path.Substring(0, path.Length - 1))),
+						WebUtility.UrlEncode(name), pattern);
+				}
+				else
+				{
+					build.AppendFormat(
+						"<tr><td>DIR</td><td><a href=\"/Filesystem?path={0}{1}&pattern={2}\">{1}</a></td></tr>",
+						WebUtility.UrlEncode(path), WebUtility.UrlEncode(name), pattern);
+				}
+			}
+			// Get files, and hyperlink them for download
+			FileInfo[] files = nfs.GetFiles(search, false);
+			// Check to make sure that there just aren't any files, which apparently also returns null...
+			if (null == files || (0 == files.Length))
+			{
+				if (nfs.GetError() != 0)
+				{
+					String error = "An error occurred while querying file list.<br />The error number is " +
+					"<a href=\"http://msdn.microsoft.com/en-us/library/windows/desktop/ms681381(v=vs.85).aspx\">" +
+						nfs.GetError() + "</a>";
+					return error;
+				}
+				else
+				{
+					build.AppendLine("<h4>There are no files in this directory.</h4>");
+				}
+			}
+			else
+			{
+				foreach (FileInfo info in files)
+				{
+					build.AppendFormat(
+						"<tr><td>{3}</td><td><a href=\"/Filesystem?path={0}&download={1}\">{2}</a></td></tr>",
+						WebUtility.UrlEncode(path), WebUtility.UrlEncode(info.Name), info.Name, info.Size);
+				}
+			}
+			return build.Append("</table>").ToString();
+		}
+
 		private static void buildHexTable (StringBuilder build, byte[] data)
 		{
 			if (null == data)

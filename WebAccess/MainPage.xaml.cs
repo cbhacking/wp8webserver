@@ -113,7 +113,8 @@ namespace WebAccess
 						if (null != v6)
 						{
 							if (MessageBoxResult.OK == MessageBox.Show(
-								"Unable to find an IPv4 address. An IPv6 address was found, though. Press OK to use it, or Cancel to search again.",
+								"Unable to find an IPv4 address. An IPv6 address was found. " +
+								"Press OK to use IPv6, or Cancel to search again.",
 								"Use IPv6 address?", MessageBoxButton.OKCancel))
 							{
 								ServerUrl.Content = v6;
@@ -123,7 +124,9 @@ namespace WebAccess
 						else
 						{	// Didn't find either v4 or v6
 							ServerUrl.Content = "Need IP address on WiFi!";
-							if (MessageBoxResult.OK == MessageBox.Show("Web server requires WiFi connection. Pressing OK will open WiFi settings now.",
+							if (MessageBoxResult.OK == MessageBox.Show(
+								"Web server requires WiFi connection. " +
+								"Pressing OK will open WiFi settings now.",
 								"Open WiFi settings?", MessageBoxButton.OKCancel))
 							{
 								Launcher.LaunchUriAsync(new Uri("ms-settings-wifi:"));
