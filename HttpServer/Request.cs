@@ -2,7 +2,7 @@
 	* HttpServer\Request.cs
 	* Author: GoodDayToDie on XDA-Developers forum
 	* License: Microsoft Public License (MS-PL)
-	* Version: 0.4.3
+	* Version: 0.5.1
 	* Source: https://wp8webserver.codeplex.com
 	*
 	* Parses an HTTP request from the listener. Does not perform any I/O.
@@ -46,7 +46,7 @@ namespace HttpServer
 		MimePart[] bodyparts;
 
 		// Parser markers
-		long current;
+		int current;
 		int currentLine;
 		int bodyIndex;
 
@@ -68,7 +68,8 @@ namespace HttpServer
 			multipartboundry = null;
 			body = null;
 			bodytext = null;
-			current = 0L;
+			bodyparts = null;
+			current = 0;
 			currentLine = 0;
 			bodyIndex = -1;
 		}
@@ -89,11 +90,24 @@ namespace HttpServer
 			urlparams = null;
 		}
 
-		public HttpRequest (ref byte[] request) : this()
+		/// <summary>
+		/// Creates a new HttpRequest from the specified portion of the provided String.
+		/// </summary>
+		/// <remarks>
+		/// If the array does not contain a complete request, the Complete property will be false.
+		/// It is possible to add additional data to the request using the Continue method.
+		/// There can be more than one request in an array; only the first will be constructed.
+		/// Any data beyond the first request will be returned in <paramref name="request"/>.
+		/// </remarks>
+		/// <param name="request">Byte array containing the request. Returns further data.</param>
+		/// <param name="length">Number of bytes, 0-indexed, of the array to process.</param>
+		public HttpRequest (ref byte[] request, int length) : this()
 		{
-			request = parseRequest(request, false);
-			return;
+			request = parseRequest(request, length, false);
 		}
+
+		public HttpRequest (ref byte[] request) : this(ref request, request.Length)
+		{ }
 
 		private void parseFirstLine (String line)
 		{
@@ -159,6 +173,7 @@ namespace HttpServer
 					fragment = null;
 				}
 			}
+			path = WebUtility.UrlDecode(path);
 			if (firstline.Length == 2 || String.IsNullOrEmpty(firstline[2]))
 			{
 				// No HTTP/VERSION field
@@ -252,12 +267,16 @@ namespace HttpServer
 			}
 		}
 
-		private byte[] parseRequest (byte[] request, bool resume)
+		private byte[] parseRequest (byte[] request, int length, bool resume)
 		{
+			if (length > request.Length || length < 0)
+			{
+				throw new ArgumentOutOfRangeException("length", length, "The length must be between zero and request.Length, inclusive!");
+			}
 			if (!resume)
 			{
 				// Start the search from the beginning
-				current = 0L;
+				current = 0;
 				body = null;
 				bodytext = null;
 				bodyIndex = -1;
@@ -265,7 +284,7 @@ namespace HttpServer
 			if (bodyIndex <= 0)
 			{
 				// Haven't found the end of the headers yet.
-				for (; current < (request.Length - 3); current++)
+				for (; current < (length - 3); current++)
 				{
 					// Find the end of the headers
 					if (Utility.CR == request[current] && Utility.CR == request[current + 2] &&
@@ -280,13 +299,29 @@ namespace HttpServer
 						parseHeaders(lines, 1);
 						// End of headers reached, skip over the blank line
 						current += 4;
-						bodyIndex = (int)current;
+						bodyIndex = current;
 						break;
 					}
 				}
 			}
 			// Check whether the request is done
-			if ((contentlength > 0) && ((request.Length - bodyIndex) >= contentlength))
+			if (-1 != bodyIndex && -1 == contentlength)
+			{	// We'd know if there's a body, and there isn't; we're done
+				current = -1;
+				if (length > bodyIndex)
+				{
+					// There may be another request past this one
+					byte[] remainder = new byte[length - bodyIndex];
+					Array.Copy(request, (int)bodyIndex, remainder, 0, remainder.Length);
+					return remainder;
+				}
+				else
+				{
+					// No remainder in this particular packet
+					return null;
+				}
+			}
+			else if ((contentlength > 0) && ((length - bodyIndex) >= contentlength))
 			{
 				// We have the entire body already
 				body = new byte[contentlength];
@@ -320,10 +355,10 @@ namespace HttpServer
 				// Since we have the whole body...
 				current = -1;
 				long totallen = (contentlength > 0) ? bodyIndex + contentlength : bodyIndex;
-				if (request.Length > totallen)
+				if (length > totallen)
 				{
 					// There may be another request past this one
-					byte[] remainder = new byte[request.Length - totallen];
+					byte[] remainder = new byte[length - totallen];
 					Array.Copy(request, (int)totallen, remainder, 0, remainder.Length);
 					return remainder;
 				}
@@ -414,7 +449,7 @@ namespace HttpServer
 							}
 							#endregion
 							// Note that we're done with this request, return any remnant
-							current = -1L;
+							current = -1;
 							currentLine = -1;
 							request = request.Substring(endIndex + (int)contentlength);
 						}
@@ -422,7 +457,7 @@ namespace HttpServer
 					else
 					{
 						// There is no body to this request; we're done
-						current = -1L;
+						current = -1;
 						currentLine = -1;
 						request = request.Substring(endIndex);
 					}
@@ -491,9 +526,9 @@ namespace HttpServer
 		}
 
 		/// <summary>
-		/// Gets whether the request data was sufficient for the full request
+		/// Gets whether the request data was sufficient for the full request.
 		/// </summary>
-		public bool Complete { get { return ((-1L == current) || (-1 == currentLine)); } }
+		public bool Complete { get { return ((-1 == current) || (-1 == currentLine)); } }
 
 		/// <summary>
 		/// Gets the HTTP request method (such as GET or HEAD).
@@ -502,15 +537,15 @@ namespace HttpServer
 		public HttpMethod Method { get { return method; } }
 
 		/// <summary>
-		/// Gets the path component of the URL, without scheme, hostname, port, query string, or fragment.
-		/// The path is presented as-is and may contain URL-encoded characters
+		/// Gets the URI path component, without scheme, hostname, port, query, or fragment.
+		/// The path has been URL-decoded.
 		/// </summary>
 		public String Path { get { return path; } }
 
 		/// <summary>
 		/// Gets the query string component of the URL without the leading '?'.
 		/// The querystring is presented as-is and may contain URL-encoded characters.
-		/// To get name/value pairs, use UrlParameters.
+		/// To get decoded name/value pairs, use UrlParameters.
 		/// </summary>
 		/// <seealso cref="UrlParameters"/>
 		public String QueryString { get { return querystring; } }
@@ -544,19 +579,21 @@ namespace HttpServer
 					}
 					else
 					{
-						String[] items = querystring.Split(new char[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
+						String[] items = querystring.Split(
+							new char[] { '&' },
+							StringSplitOptions.RemoveEmptyEntries);
 						urlparams = new Dictionary<String, String>(items.Length);
 						foreach (String item in items)
 						{
 							if (item.Contains('='))
 							{
-								String name = HttpUtility.UrlDecode(item.Substring(0, item.IndexOf('=')));
-								String value = HttpUtility.UrlDecode(item.Substring(item.IndexOf('=') + 1));
-								urlparams[name] = value;
+								String[] pair = item.Split(new char[] { '=' }, 2);
+								urlparams[WebUtility.UrlDecode(pair[0])] =
+									WebUtility.UrlDecode(pair[1]);
 							}
 							else
 							{
-								urlparams[item] = null;
+								urlparams[WebUtility.UrlDecode(item)] = null;
 							}
 						}
 					}
@@ -582,6 +619,19 @@ namespace HttpServer
 		/// The body is presented as-is and may contain encoded characters.
 		/// </summary>
 		public byte[] Body { get { return body; } }
+
+		/// <summary>
+		/// Gets the body of the request as a string.
+		/// Null if there is no body, or body is not text.
+		/// No transformations applied except to convert the text to Unicode.
+		/// </summary>
+		public String BodyText {  get { return this.bodytext; } }
+
+		/// <summary>
+		/// Gets the top-level MIME parts from the body. Null if request body is not multipart.
+		/// MIME parts may contain multipart bodies, with their own MimePart childred.
+		/// </summary>
+		public MimePart[] MimeParts { get { return bodyparts; } }
 
 		public bool ConnectionShouldPersist ()
 		{
@@ -617,9 +667,14 @@ namespace HttpServer
 
 		public byte[] Continue (byte[] request)
 		{
+			return Continue(request, request.Length);
+		}
+
+		public byte[] Continue (byte[] request, int length)
+		{
 			if (this.Complete)
 				return request;
-			return parseRequest(request, true);
+			return parseRequest(request, length, true);
 		}
 	}
 }

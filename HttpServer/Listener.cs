@@ -2,7 +2,7 @@
  * HttpServer\Listener.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.3
+ * Version: 0.5.1
  * Source: https://wp8webserver.codeplex.com
  *
  * Implements the listener portion of an HTTP server.
@@ -126,19 +126,19 @@ namespace HttpServer
 				{
 					// This is already in its own thread; just call the handler directly.
 					Thread.CurrentThread.Name = "AcceptAsyncThread";
-					handler(args.AcceptSocket);
-				}
+					binaryHandler(args.AcceptSocket);
 			}
+		}
 		}
 
 		/// <summary>
-		/// Receives the incoming request and processes it
+		/// Receives the incoming request and processes it.
 		/// </summary>
-		/// <param name="o">The SocketAsyncEventArgs</param>
+		/// <param name="o">The network socket</param>
 		private void handler (Object o)
 		{
 			Socket sock = (Socket)o;
-			handler(sock);
+			binaryHandler(sock);
 		}
 
 		/// <summary>
@@ -225,6 +225,105 @@ namespace HttpServer
 			} while (sock.Connected);
 		}
 
+		private void binaryHandler (Socket sock)
+		{
+			int maxlen = 1 << 20;	// Use a 1MB buffer
+			sock.ReceiveBufferSize = maxlen;
+			byte[] data = new byte[maxlen];
+			SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+			do
+			{	// Get one request at a time
+				HttpRequest request = new HttpRequest();
+				int totalread = 0;
+				try
+				{
+					do
+					{	// Repetitively read until request is complete
+						if ((totalread + maxlen) > data.Length)
+						{	// Enlarge the buffer
+							byte[] newdata = new byte[2 * data.Length];
+							Array.Copy(data, newdata, data.Length);
+							data = newdata;
+						}
+						args.SetBuffer(data, totalread, data.Length - totalread);
+						// Don't need the return value; we control the buffer.
+						getBytes(sock, maxlen, 120000, args);
+						if (SocketError.Success == args.SocketError)
+						{
+							totalread += args.BytesTransferred;
+							byte[] remainder = request.Continue(data, totalread);
+							// There might be another request, or at least the start of one
+							if (null != remainder)
+							{
+								totalread -= (data.Length - remainder.Length);
+								data = remainder;
+							}
+							else
+							{	// No further data, just reset the offset.
+								totalread = 0;
+							}
+						}
+						else
+						{	// Some error occurred
+							return;
+						}
+						// Sanity check what we have so far
+						if (HttpVersion.INVALID_VERSION == request.Version)
+						{
+							HttpResponse resp = new HttpResponse(
+								sock,
+								HttpStatusCode.HttpVersionNotSupported,
+								Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
+								"The protocol version specified in the request is not recognized!\n");
+							// Send the error report, which will close the connection; we don't care what else the client wanted
+							resp.Send(ConnectionPersistence.CLOSE);
+							return;
+						}
+						if (HttpMethod.INVALID_METHOD == request.Method)
+						{
+							HttpResponse resp = new HttpResponse(
+								sock,
+								HttpStatusCode.NotImplemented,
+								Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
+								"The request HTTP verb (method) is not recognized!\n",
+								request.Version);
+							// Send the error report, which will close the connection; we don't care what else the client wanted
+							resp.Send(ConnectionPersistence.CLOSE);
+							return;
+						}
+					} while (!request.Complete);
+					// If we get here, this request is complete (might be more in data)
+					servicer(request, sock);
+				}
+				catch (ProtocolViolationException ex)
+				{
+					if (sock.Connected)
+					{
+						HttpResponse resp = new HttpResponse(
+							sock,
+							HttpStatusCode.BadRequest,
+							Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
+							"Bad request!\n" + ex.ToString());
+						resp.Send(ConnectionPersistence.CLOSE);
+					}
+					return;
+				}
+				catch (Exception ex)
+				{
+					if (sock.Connected)
+					{
+						HttpResponse resp = new HttpResponse(
+							sock,
+							HttpStatusCode.InternalServerError,
+							Utility.CONTENT_TYPES[(int)ResponseType.TEXT_PLAIN],
+							"Internal Server Error!\n" + ex.ToString() + '\n' + ex.StackTrace);
+						resp.Send(ConnectionPersistence.CLOSE);
+					}
+					return;
+				}
+			} while (sock.Connected);
+        }
+
 		/// <summary>
 		/// Retrieves waiting data on the socket. Will block if no data is available
 		/// </summary>
@@ -265,18 +364,57 @@ namespace HttpServer
 			}
 		}
 
-		private byte[] getBytes (Socket sock, int maxLen = (1 << 20))
+		private byte[] getBytes (
+			Socket sock,
+			int maxLen = (1 << 20),
+			int timeout = 120000,
+			SocketAsyncEventArgs args = null)
 		{
 			AutoResetEvent wait = new AutoResetEvent(false);
-			byte[] buffer = new byte[maxLen];
-			SocketAsyncEventArgs args = new SocketAsyncEventArgs();
-			args.SetBuffer(buffer, 0, maxLen);
-			args.Completed += (Object s, SocketAsyncEventArgs a2) => { args = a2; wait.Set(); };
+			bool makeBuffer = false;
+			// If the caller didn't supply their own socket async args, create one.
+			if (null == args)
+			{
+				args = new SocketAsyncEventArgs();
+				args.SetBuffer(new byte[maxLen], 0, maxLen);
+				args.Completed +=
+					(Object s, SocketAsyncEventArgs a2) =>
+					{
+						args = a2;
+						wait.Set();
+					};
+				// Flag this args as having our version of its Completed event.
+				args.UserToken = args;
+				// Remember that the caller doesn't know the args; we have to handle them here.
+				makeBuffer = true;
+			}
+			else
+			{
+				// Sanity-check the supplied args.
+				if (null == args.Buffer)
+				{
+					makeBuffer = true;
+					args.SetBuffer(new byte[maxLen], 0, maxLen);
+				}
+				if (null == args.UserToken)
+				{
+					// We have to set the Completed event ourselves.
+					args.Completed +=
+						(Object s, SocketAsyncEventArgs a2) =>
+						{
+							args = a2;
+							wait.Set();
+						};
+				}
+			}
+			// Get the buffer, whether it was passed in or we created it ourselves.
+			byte[] buffer = args.Buffer;
 			if (sock.ReceiveAsync(args))
 			{
 				// It's running in the background; block until done
-				if (!wait.WaitOne(120000))
+				if (!wait.WaitOne(timeout))
 				{	// Timed out; stop listening for more data
+					args.SocketError = SocketError.TimedOut;
 					return null;
 				}
 			}
@@ -287,19 +425,20 @@ namespace HttpServer
 				if (reclen > 0)
 				{
 					// We got *some* data
-					if (reclen < maxLen)
+					if (makeBuffer && (reclen < maxLen))
 					{
-						// Shrink the returned buffer
+						// Shrink the buffer before returning it.
 						byte[] newbuf = new byte[reclen];
 						Array.Copy(buffer, newbuf, reclen);
 						return newbuf;
 					}
-					// We filled the buffer
+					// We filled the buffer, (or don't care, because the caller knows the args).
 					return buffer;
 				}
 				else
 				{
 					// Connection closed gracefully
+					args.SocketError = SocketError.Disconnecting;
 					return null;
 				}
 			}

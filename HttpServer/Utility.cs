@@ -2,7 +2,7 @@
  * HttpServer\Utility.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.4.2
+ * Version: 0.5.1
  * Source: https://wp8webserver.codeplex.com
  *
  * HTTP-related enumerations and string collections.
