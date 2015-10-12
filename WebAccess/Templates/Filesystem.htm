@@ -2,7 +2,12 @@
     <form action="/Filesystem" method="get">
         Path: <input type="text" name="path" placeholder="File system path, may include drive letter" size="50" />
         <input type="hidden" name="pattern" value="*" />
-        <input type="submit" name="getFiles" value="List Files" />
+        <input type="submit" name="getFiles" value="List Files" /><br />
+    </form>
+    <form action="/Filesystem?upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" size="40" />
+        <input type="hidden" name="path" />
+        <input type="submit" name="upload" value="Upload File" />
     </form>
     <script type="text/javascript">
         var params = {};
@@ -12,7 +17,9 @@
             }
         );
         if (params["path"]) {
-            document.forms[0].path.value = decodeURIComponent(params["path"].replace("+", " "));
+            var path = decodeURIComponent(params["path"].replace("+", " "));
+            document.forms[0].path.value = path;
+            document.forms[1].path.value = path;
         }
     </script>
     <p><br />{CONTENT}</p>

@@ -2,7 +2,7 @@
  * WebAccess\WebApplication.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.5
+ * Version: 0.6.0
  * Source: https://wp8webserver.codeplex.com
  *
  * Performs operations involving .REG files.
