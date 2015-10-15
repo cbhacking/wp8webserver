@@ -211,7 +211,13 @@ namespace WebAccess
 					String pathname = Path.Combine(path, filename);
 					if (nfs.WriteFile(pathname, filedata))
 					{
-						return "<h3>File uploaded successfully!</h3>" + 
+						return "<h3>File uploaded successfully.</h3>" + 
+							buildFileTable(path, "*");
+					}
+					else
+					{
+						// Something went wrong with the file upload (probably access denied).
+						return "<h3>File upload failed with error " + nfs.GetError() + "!</h3>" +
 							buildFileTable(path, "*");
 					}
 				}

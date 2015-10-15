@@ -343,6 +343,7 @@
       <Capability Name="ID_CAP_ZTRACE" />
       -->
       <!-- The following require interop-unlock and capability-unlock (WP8.x)
+       -->
       <Capability Name="ID_CAP_ACCESS_FAMILY_NOTES_API" />
       <Capability Name="ID_CAP_APPPREINSTALL_DIRECTORY" />
       <Capability Name="ID_CAP_APPRESOLVER" />
@@ -410,7 +411,6 @@
       <Capability Name="ID_CAP_WIFI_BASIC" />
       <Capability Name="ID_CAP_WPTOOLS_INSTALL_FOLDER" />
       <Capability Name="ID_CAP_ZMFSERVICES" />
-       -->
     </Capabilities>
     <Tasks>
       <DefaultTask Name="_default" NavigationPage="MainPage.xaml">
