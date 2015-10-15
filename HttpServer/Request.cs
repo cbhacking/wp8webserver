@@ -538,7 +538,7 @@ namespace HttpServer
 
 		/// <summary>
 		/// Gets the URI path component, without scheme, hostname, port, query, or fragment.
-		/// The path has beeing URL-decoded.
+		/// The path has been URL-decoded.
 		/// </summary>
 		public String Path { get { return path; } }
 

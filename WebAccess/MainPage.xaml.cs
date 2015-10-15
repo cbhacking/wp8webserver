@@ -2,7 +2,7 @@
  * WebAccess\MainPage.xaml.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.6
+ * Version: 0.6.0
  * Source: https://wp8webserver.codeplex.com
  *
  * Finds the WiFi address, displays the URL, and starts the web server.

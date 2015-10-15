@@ -2,7 +2,7 @@
  * HttpServer\Listener.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.0
+ * Version: 0.5.1
  * Source: https://wp8webserver.codeplex.com
  *
  * Implements the listener portion of an HTTP server.
