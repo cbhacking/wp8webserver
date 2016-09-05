@@ -88,6 +88,7 @@ namespace WebAccess
 					StopServer();
 				}
 				bool foundV4 = false;
+				IPAddress addr = null;
 				do
 				{
 					String v6 = null;
@@ -100,11 +101,13 @@ namespace WebAccess
 								ServerUrl.Content = "http://" + name.CanonicalName + ":" + port;
 								foundV4 = true;
 								v6 = null;
+								addr = IPAddress.Parse(name.CanonicalName);
 								break;
 							}
 							if (HostNameType.Ipv6 == name.Type)
 							{
 								v6 = "http://[" + name.CanonicalName.Replace("%", "%25") + "]:" + port;
+								addr = IPAddress.Parse(name.CanonicalName);
 							}
 						}
 					}
@@ -139,13 +142,13 @@ namespace WebAccess
 						break;
 					}
 				} while (true);
-				server = new WebServer(port, WebApplication.ServiceRequest);
+				server = new WebServer(addr, port, WebApplication.ServiceRequest);
 				App.serverRunning = true;
 			}
 			catch (Exception ex)
 			{
 				MessageBox.Show("Unable to start HTTP listener!\nException: " + ex.ToString());
-				Application.Current.Terminate();
+				//Application.Current.Terminate();
 			}
 		}
 

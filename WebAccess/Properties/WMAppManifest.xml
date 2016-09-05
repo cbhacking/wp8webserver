@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Deployment xmlns="http://schemas.microsoft.com/windowsphone/2012/deployment" AppPlatformVersion="8.0">
   <DefaultLanguage xmlns="" code="en-US" />
-  <App xmlns="" ProductID="{7bbc8703-fb43-4e9e-88c9-62957ea0d59b}" Title="WebServer Native Access" RuntimeType="Silverlight" Version="0.6.0" Genre="apps.normal" Author="GoodDayToDie" Description="Browse your phone's file system and registry over WiFi using a web browser." Publisher="GoodDayToDie via XDA-Developers forum" PublisherID="{1362529f-b4ff-41e9-9651-40134086d0fa}">
+  <App xmlns="" ProductID="{7bbc8703-fb43-4e9e-88c9-62957ea0d59b}" Title="WebServer Native Access" RuntimeType="Silverlight" Version="0.6.1" Genre="apps.normal" Author="GoodDayToDie" Description="Browse your phone's file system and registry over WiFi using a web browser." Publisher="GoodDayToDie via XDA-Developers forum" PublisherID="{1362529f-b4ff-41e9-9651-40134086d0fa}">
     <IconPath IsRelative="true" IsResource="false">Assets\ApplicationIcon.png</IconPath>
     <Capabilities>
       <!-- Actually required -->
@@ -33,6 +33,70 @@
       <Capability Name="ID_CAP_WALLET" />
       <Capability Name="ID_CAP_WALLET_PAYMENTINSTRUMENTS" />
       <Capability Name="ID_CAP_WEBBROWSERCOMPONENT" />
+      <!-- The following are second-party sideloadable capabilities (W10M only)
+      -->
+      <Capability Name="ID_CAP_BLUETOOTH_ADMIN" />
+      <Capability Name="ID_CAP_CALLMESSAGING_FILTER" />
+      <Capability Name="ID_CAP_CAMERA" />
+      <Capability Name="ID_CAP_CELL_API_COMMON" />
+      <Capability Name="ID_CAP_CELL_API_LOCATION" />
+      <Capability Name="ID_CAP_CELL_API_OEM_PASSTHROUGH" />
+      <Capability Name="ID_CAP_CELL_API_UICC" />
+      <Capability Name="ID_CAP_CELL_API_UICC_LOWLEVEL" />
+      <Capability Name="ID_CAP_CELL_OEM_UICC_DATASTORE" />
+      <Capability Name="ID_CAP_CELL_WNF" />
+      <Capability Name="ID_CAP_CSP_FOUNDATION" />
+      <Capability Name="ID_CAP_CSP_MAIL" />
+      <Capability Name="ID_CAP_CSP_OEM" />
+      <Capability Name="ID_CAP_CSP_W4_APPLICATION" />
+      <Capability Name="ID_CAP_CSP_WIFI_HOTSPOT" />
+      <Capability Name="ID_CAP_DATAPLANUSAGE_ADMIN" />
+      <Capability Name="ID_CAP_DEVICE_MANAGEMENT" />
+      <Capability Name="ID_CAP_DEVICE_MANAGEMENT_ADMIN" />
+      <Capability Name="ID_CAP_DEVICE_MANAGEMENT_BOOTSTRAP" />
+      <Capability Name="ID_CAP_DEVICE_MANAGEMENT_SECURITY_POLICIES" />
+      <Capability Name="ID_CAP_DU_MIGRATOR_STATUS_OEM" />
+      <Capability Name="ID_CAP_ENTERPRISE_SHARED_DATA" />
+      <Capability Name="ID_CAP_INTERNAL_DEPLOYMENT" />
+      <Capability Name="ID_CAP_INTERNET_EXPLORER_FAVORITES" />
+      <Capability Name="ID_CAP_INTERNET_EXPLORER_SEARCH_PROVIDER_KEYS_HKCU" />
+      <Capability Name="ID_CAP_KIDZONE_CUSTOMIZATION" />
+      <Capability Name="ID_CAP_MAP" />
+      <Capability Name="ID_CAP_MAP_WRITE" />
+      <Capability Name="ID_CAP_MEDIALIB" />
+      <Capability Name="ID_CAP_MEDIALIB_PHOTO_FULL" />
+      <Capability Name="ID_CAP_MO_CLOUDMESSAGING" />
+      <Capability Name="ID_CAP_NATIVE_NETWORK_REPLACEMENT" />
+      <Capability Name="ID_CAP_NETWORKING_ADMIN" />
+      <Capability Name="ID_CAP_NETWORKING_VPN_PROVIDER" />
+      <Capability Name="ID_CAP_NVREADWRITE" />
+      <Capability Name="ID_CAP_OEM_ADC" />
+      <Capability Name="ID_CAP_OEM_CUSTOM" />
+      <Capability Name="ID_CAP_OEM_DEPLOYMENT" />
+      <Capability Name="ID_CAP_PEOPLE_EXTENSION" />
+      <Capability Name="ID_CAP_PEOPLE_EXTENSION_IM" />
+      <Capability Name="ID_CAP_PEOPLE_EXTENSION_MOBILE" />
+      <Capability Name="ID_CAP_PERSONAL_INFORMATION_IMPORT" />
+      <Capability Name="ID_CAP_PHONE_ADMIN" />
+      <Capability Name="ID_CAP_PLATFORM_EXTENSIBILITY" />
+      <Capability Name="ID_CAP_RUNTIME_CONFIG" />
+      <Capability Name="ID_CAP_SCREEN_RECORDER" />
+      <Capability Name="ID_CAP_SCREEN_RECORDER_BKG" />
+      <Capability Name="ID_CAP_SHARED_USER_CERTIFICATES" />
+      <Capability Name="ID_CAP_SHELL_DEVICE_LOCK_UI_API" />
+      <Capability Name="ID_CAP_SHELL_OEM_ADMIN" />
+      <Capability Name="ID_CAP_SMS" />
+      <Capability Name="ID_CAP_SMS_COMPANION" />
+      <Capability Name="ID_CAP_SMS_INTERCEPT_AGENT" />
+      <Capability Name="ID_CAP_SMS_INTERCEPT_RECIPIENT" />
+      <Capability Name="ID_CAP_SYNC_EXTENSION" />
+      <Capability Name="ID_CAP_VOICEMAIL" />
+      <Capability Name="ID_CAP_WALLET_SECUREELEMENT" />
+      <Capability Name="ID_CAP_WIFI_BASIC" />
+      <!-- The following are second-party capabilities not sideloadable on W10M without interop-unlock
+      <Capability Name="ID_CAP_OEMPUBLICDIRECTORY" />
+      <Capability Name="ID_CAP_INTEROPSERVICES" />
+      -->
       <!-- The following require interop-unlock and capability-unlock (WP8.0 only)
       <Capability Name="ID_CAP_ACCESSIBILITY" />
       <Capability Name="ID_CAP_CSP_DEVICELOCK" />
@@ -343,7 +407,6 @@
       <Capability Name="ID_CAP_ZTRACE" />
       -->
       <!-- The following require interop-unlock and capability-unlock (WP8.x)
-       -->
       <Capability Name="ID_CAP_ACCESS_FAMILY_NOTES_API" />
       <Capability Name="ID_CAP_APPPREINSTALL_DIRECTORY" />
       <Capability Name="ID_CAP_APPRESOLVER" />
@@ -411,6 +474,7 @@
       <Capability Name="ID_CAP_WIFI_BASIC" />
       <Capability Name="ID_CAP_WPTOOLS_INSTALL_FOLDER" />
       <Capability Name="ID_CAP_ZMFSERVICES" />
+       -->
     </Capabilities>
     <Tasks>
       <DefaultTask Name="_default" NavigationPage="MainPage.xaml">
