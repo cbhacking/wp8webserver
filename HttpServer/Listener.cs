@@ -2,7 +2,7 @@
  * HttpServer\Listener.cs
  * Author: GoodDayToDie on XDA-Developers forum
  * License: Microsoft Public License (MS-PL)
- * Version: 0.5.1
+ * Version: 0.5.2
  * Source: https://wp8webserver.codeplex.com
  *
  * Implements the listener portion of an HTTP server.
@@ -39,16 +39,25 @@ namespace HttpServer
 		/// <param name="port">The TCP port to listen on</param>
 		/// <param name="serv">The function which handles received requests.</param>
 		/// <exception cref="System.Net.Sockets.SocketException">Opening the socket for listening failed</exception>
-		public WebServer (ushort port, RequestServicer serv)
+		public WebServer (IPAddress address, ushort port, RequestServicer serv)
 		{
+			if (null == address)
+			{
+				address = IPAddress.Any;
+			}
 			servicer = serv;
+			cancelsource = new CancellationTokenSource();
 			serversock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-			EndPoint local = new IPEndPoint(IPAddress.Any, port);
+			EndPoint local = new IPEndPoint(address, port);
 			serversock.Bind(local);
 			serversock.Listen(5);
-			cancelsource = new CancellationTokenSource();
 			// Launch a thread that asynchronously calls accept
 			listener();
+		}
+
+		public WebServer (ushort port, RequestServicer serv)
+			: this(IPAddress.Any, port, serv)
+		{
 		}
 
 		~WebServer ()
@@ -59,7 +68,10 @@ namespace HttpServer
 		protected virtual void Dispose (bool disposing)
 		{
 			Close();
-			cancelsource.Dispose();
+			if (null != cancelsource)
+			{
+				cancelsource.Dispose();
+			}
 		}
 
 		public void Dispose ()
@@ -70,11 +82,14 @@ namespace HttpServer
 
 		public void Close ()
 		{
-			cancelsource.Cancel();
-			if (serversock.Connected)
+			if (null != cancelsource)
 			{
-				serversock.Shutdown(SocketShutdown.Both);
-				serversock.Close();
+				cancelsource.Cancel();
+				if (null != serversock && serversock.Connected)
+				{
+					serversock.Shutdown(SocketShutdown.Both);
+					serversock.Close();
+				}
 			}
 		}
 
