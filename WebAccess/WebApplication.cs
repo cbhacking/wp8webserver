@@ -36,7 +36,9 @@ namespace WebAccess
 	{
 		static WebApplication ()
 		{
+#if USE_ROOTRPC
 			nfs.InitializeRoot();
+#endif
 		}
 		public static void ServiceRequest (HttpRequest req, Socket sock)
 		{
