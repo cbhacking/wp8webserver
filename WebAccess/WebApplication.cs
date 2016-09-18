@@ -34,6 +34,10 @@ namespace WebAccess
 {
 	public static class WebApplication
 	{
+		static WebApplication ()
+		{
+			nfs.InitializeRoot();
+		}
 		public static void ServiceRequest (HttpRequest req, Socket sock)
 		{
 			String content = null;

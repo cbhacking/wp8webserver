@@ -1,8 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
-MinimumVisualStudioVersion = 10.0.40219.1
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpServer", "HttpServer\HttpServer.csproj", "{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAccess", "WebAccess\WebAccess.csproj", "{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}"
@@ -15,6 +13,12 @@ Global
 		Release|Any CPU = Release|Any CPU
 		Release|ARM = Release|ARM
 		Release|x86 = Release|x86
+		RootDebug|Any CPU = RootDebug|Any CPU
+		RootDebug|ARM = RootDebug|ARM
+		RootDebug|x86 = RootDebug|x86
+		RootRelease|Any CPU = RootRelease|Any CPU
+		RootRelease|ARM = RootRelease|ARM
+		RootRelease|x86 = RootRelease|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -29,6 +33,18 @@ Global
 		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Release|ARM.Build.0 = Release|ARM
 		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Release|x86.ActiveCfg = Release|x86
 		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.Release|x86.Build.0 = Release|x86
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.RootDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.RootDebug|Any CPU.Build.0 = Debug|Any CPU
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.RootDebug|ARM.ActiveCfg = Debug|ARM
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.RootDebug|ARM.Build.0 = Debug|ARM
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.RootDebug|x86.ActiveCfg = Debug|x86
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.RootDebug|x86.Build.0 = Debug|x86
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.RootRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.RootRelease|Any CPU.Build.0 = Release|Any CPU
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.RootRelease|ARM.ActiveCfg = Release|ARM
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.RootRelease|ARM.Build.0 = Release|ARM
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.RootRelease|x86.ActiveCfg = Release|x86
+		{066B213F-BC50-4CE3-9AF2-56ADC0D84ACA}.RootRelease|x86.Build.0 = Release|x86
 		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
@@ -47,6 +63,24 @@ Global
 		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.Release|x86.ActiveCfg = Release|x86
 		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.Release|x86.Build.0 = Release|x86
 		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.Release|x86.Deploy.0 = Release|x86
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootDebug|Any CPU.ActiveCfg = RootDebug|Any CPU
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootDebug|Any CPU.Build.0 = RootDebug|Any CPU
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootDebug|Any CPU.Deploy.0 = RootDebug|Any CPU
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootDebug|ARM.ActiveCfg = RootDebug|ARM
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootDebug|ARM.Build.0 = RootDebug|ARM
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootDebug|ARM.Deploy.0 = RootDebug|ARM
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootDebug|x86.ActiveCfg = RootDebug|x86
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootDebug|x86.Build.0 = RootDebug|x86
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootDebug|x86.Deploy.0 = RootDebug|x86
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootRelease|Any CPU.ActiveCfg = RootRelease|Any CPU
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootRelease|Any CPU.Build.0 = RootRelease|Any CPU
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootRelease|Any CPU.Deploy.0 = RootRelease|Any CPU
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootRelease|ARM.ActiveCfg = RootRelease|ARM
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootRelease|ARM.Build.0 = RootRelease|ARM
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootRelease|ARM.Deploy.0 = RootRelease|ARM
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootRelease|x86.ActiveCfg = RootRelease|x86
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootRelease|x86.Build.0 = RootRelease|x86
+		{7BBC8703-FB43-4E9E-88C9-62957EA0D59B}.RootRelease|x86.Deploy.0 = RootRelease|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
