@@ -94,7 +94,10 @@ namespace WebAccess
 					String v6 = null;
 					foreach (HostName name in NetworkInformation.GetHostNames())
 					{
-						if (name.IPInformation.NetworkAdapter.IanaInterfaceType == 71)
+						if (name != null &&
+							name.IPInformation != null &&
+							name.IPInformation.NetworkAdapter != null &&
+							name.IPInformation.NetworkAdapter.IanaInterfaceType == 71)
 						{
 							if (HostNameType.Ipv4 == name.Type)
 							{	// Found a v4 address; we can exit the loop
