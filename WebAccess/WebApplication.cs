@@ -363,13 +363,13 @@ namespace WebAccess
 					build.AppendLine("<table><tr><th>Keys</th></tr>");
 					foreach (String key in subkeys)
 					{
-						build.Append("<tr><td><a href='/Registry?hive=").Append(((uint)hk).ToString("X"))
+						build.Append("<tr><td><a href=\"/Registry?hive=").Append(((uint)hk).ToString("X"))
 							.Append("&path=");
 						if (!String.IsNullOrEmpty(path))
 						{
-							build.Append(WebUtility.UrlEncode(path)).Append("\\");
+							build.Append(WebUtility.UrlEncode(path + "\\"));
 						}
-						build.Append(WebUtility.UrlEncode(key)).Append("'>")
+						build.Append(WebUtility.UrlEncode(key)).Append("\">")
 							.Append(key).AppendLine("</a></td></tr>");
 					}
 					build.AppendLine("</table>");
@@ -698,13 +698,14 @@ namespace WebAccess
 					build.AppendFormat(
 						"<tr><td>DIR</td><td><a href=\"/Filesystem?path={0}&pattern={2}\">{1}</a></td></tr>",
 						WebUtility.UrlEncode(Path.GetDirectoryName(path.Substring(0, path.Length - 1))),
-						WebUtility.UrlEncode(name), pattern);
+						WebUtility.HtmlEncode(name), 
+						pattern);
 				}
 				else
 				{
 					build.AppendFormat(
-						"<tr><td>DIR</td><td><a href=\"/Filesystem?path={0}{1}&pattern={2}\">{1}</a></td></tr>",
-						WebUtility.UrlEncode(path), WebUtility.UrlEncode(name), pattern);
+						"<tr><td>DIR</td><td><a href=\"/Filesystem?path={0}{1}&pattern={2}\">{3}</a></td></tr>",
+						WebUtility.UrlEncode(path), WebUtility.UrlEncode(name), pattern, WebUtility.HtmlEncode(name));
 				}
 			}
 			// Get files, and hyperlink them for download

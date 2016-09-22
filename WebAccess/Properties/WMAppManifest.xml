@@ -10,6 +10,9 @@
       <!-- Possibly useful on 8.1?
       <Capability Name="ID_CAP_NETWORKING_INTERNET_CLIENT_SERVER" />
       -->
+      <!-- Needed for RootRPC
+      <Capability Name="ID_CAP_ROOTRPC" />
+      -->
       <!-- Sideloadable on non-interop-unlocked phones; may give a little more access
       -->
       <Capability Name="ID_CAP_APPOINTMENTS" />
